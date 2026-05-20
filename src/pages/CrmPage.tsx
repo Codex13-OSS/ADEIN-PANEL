@@ -1,8 +1,13 @@
 import { ChangeEvent, useMemo, useState } from 'react';
 import SectionCard from '../components/SectionCard';
 
-type CrmTab = 'prospectos' | 'whatsapp' | 'seguimientos' | 'acciones';
-type Props = { initialTab?: CrmTab; role: 'owner' | 'seller' };
+export type CrmTab = 'prospectos' | 'whatsapp' | 'seguimientos' | 'acciones';
+
+type Props = {
+  activeTab?: CrmTab;
+  onTabChange?: (tab: CrmTab) => void;
+  role: 'owner' | 'seller';
+};
 
 const TAB_OPTIONS: { key: CrmTab; label: string }[] = [
   { key: 'prospectos', label: 'Prospectos' },
@@ -11,10 +16,20 @@ const TAB_OPTIONS: { key: CrmTab; label: string }[] = [
   { key: 'acciones', label: 'Acciones recomendadas' },
 ];
 
-function CrmPage({ initialTab = 'prospectos', role }: Props) {
-  const [activeTab, setActiveTab] = useState<CrmTab>(initialTab);
+function CrmPage({ activeTab = 'prospectos', onTabChange, role }: Props) {
+  const [internalTab, setInternalTab] = useState<CrmTab>(activeTab);
   const [fileName, setFileName] = useState('');
   const [filePreview, setFilePreview] = useState('');
+
+  const currentTab = onTabChange ? activeTab : internalTab;
+
+  const handleTabChange = (tab: CrmTab) => {
+    if (onTabChange) {
+      onTabChange(tab);
+      return;
+    }
+    setInternalTab(tab);
+  };
 
   const handleFile = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -29,7 +44,7 @@ function CrmPage({ initialTab = 'prospectos', role }: Props) {
   };
 
   const tabBody = useMemo(() => {
-    if (activeTab === 'prospectos') {
+    if (currentTab === 'prospectos') {
       return (
         <SectionCard title="Prospectos activos" subtitle="Pipeline comercial del equipo de ventas">
           <div className="controls-row">
@@ -49,7 +64,7 @@ function CrmPage({ initialTab = 'prospectos', role }: Props) {
       );
     }
 
-    if (activeTab === 'whatsapp') {
+    if (currentTab === 'whatsapp') {
       return (
         <SectionCard title="Analizar conversación de WhatsApp" subtitle="Sube el .txt exportado desde WhatsApp o pega la conversación para extraer datos comerciales.">
           <label className="dropzone" htmlFor="whatsapp-file">
@@ -81,7 +96,7 @@ function CrmPage({ initialTab = 'prospectos', role }: Props) {
       );
     }
 
-    if (activeTab === 'seguimientos') {
+    if (currentTab === 'seguimientos') {
       return <SectionCard title="Seguimientos comerciales" subtitle="Prioriza acciones de hoy para no perder cierres"><div className="analysis-grid">{[
         ['Pendiente de hoy', 'Prospecto Horizonte', 'Enviar ubicación y rango de precios', '11:30 AM', 'Alta'],
         ['Vencido', 'Prospecto Alameda', 'Confirmar visita programada', 'Ayer 6:00 PM', 'Alta'],
@@ -96,12 +111,12 @@ function CrmPage({ initialTab = 'prospectos', role }: Props) {
       ['Media', 'Dar seguimiento a no respondidos', 'No hubo respuesta en últimas 48 horas.', 'Enviar recordatorio corto y directo.'],
       ['Baja', 'Actualizar estatus de conversaciones analizadas', 'Mantener CRM limpio mejora decisiones del equipo.', 'Registrar estatus sugerido en cada lead.'],
     ].map((item) => <article className="analysis-item" key={item[1]}><h4>{item[1]}</h4><p><strong>Prioridad:</strong> {item[0]}</p><p><strong>Motivo:</strong> {item[2]}</p><p><strong>Acción sugerida:</strong> {item[3]}</p><button className="btn-outline">Ejecutar acción mock</button></article>)}</div></SectionCard>;
-  }, [activeTab, fileName, filePreview]);
+  }, [currentTab, fileName, filePreview]);
 
   return (
     <div className="page-grid">
       <SectionCard title="CRM de ventas guiado" subtitle={role === 'owner' ? 'Vista administrativa con control por vendedor' : 'Vista vendedor con foco en acción comercial'}>
-        <div className="tabs-row">{TAB_OPTIONS.map((tab) => <button key={tab.key} className={activeTab === tab.key ? 'active' : ''} onClick={() => setActiveTab(tab.key)}>{tab.label}</button>)}</div>
+        <div className="tabs-row">{TAB_OPTIONS.map((tab) => <button key={tab.key} className={currentTab === tab.key ? 'active' : ''} onClick={() => handleTabChange(tab.key)}>{tab.label}</button>)}</div>
       </SectionCard>
       {tabBody}
     </div>
