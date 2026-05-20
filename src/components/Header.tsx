@@ -18,7 +18,7 @@ function Header({ title, subtitle, role, username, onLogout, onMenuToggle }: Pro
           ☰
         </button>
         <img src="/brand/adein.png" alt="ADEIN" className="header-logo" />
-        <div>
+        <div className="header-copy">
           <h1>{title}</h1>
           <p className="header-subtitle">{subtitle}</p>
           <small>{username}</small>
