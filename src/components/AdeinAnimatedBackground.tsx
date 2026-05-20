@@ -24,32 +24,47 @@ const locationPulses = [
 
 function AdeinAnimatedBackground({ variant = 'login' }: Props) {
   return (
-    <div className={`adein-bg adein-bg-${variant}`} aria-hidden="true">
-      <div className="adein-bg-grid adein-bg-major" />
-      <div className="adein-bg-grid adein-bg-minor" />
+    <div className={`crm-animated-background ${variant}-variant`} aria-hidden="true">
+      <div className="login-background">
+        <div className="arch-grid">
+          <div className="grid-major" />
+          <div className="grid-minor" />
+        </div>
 
-      {measurementLinesX.map((top) => (
-        <span key={`x-${top}`} className="adein-measure-line is-horizontal" style={{ top }} />
-      ))}
-      {measurementLinesY.map((left) => (
-        <span key={`y-${left}`} className="adein-measure-line is-vertical" style={{ left }} />
-      ))}
+        <div className="measuring-lines">
+          {measurementLinesX.map((top) => (
+            <span key={`x-${top}`} className="m-line horizontal" style={{ top }} />
+          ))}
+          {measurementLinesY.map((left) => (
+            <span key={`y-${left}`} className="m-line vertical" style={{ left }} />
+          ))}
+        </div>
 
-      {lotShapes.map((shape) => (
-        <span
-          key={`${shape.top}-${shape.left}`}
-          className="adein-lot-shape"
-          style={{ top: shape.top, left: shape.left, width: shape.width, height: shape.height, transform: `rotate(${shape.rotate})` }}
-        />
-      ))}
+        <div className="terrain-shapes">
+          {lotShapes.map((shape) => (
+            <span
+              key={`${shape.top}-${shape.left}`}
+              className="lot"
+              style={{ top: shape.top, left: shape.left, width: shape.width, height: shape.height, transform: `rotate(${shape.rotate})` }}
+            />
+          ))}
+        </div>
 
-      {referencePoints.map((point) => (
-        <span key={`${point.top}-${point.left}`} className="adein-ref-point" style={{ top: point.top, left: point.left }} />
-      ))}
+        <div className="reference-points">
+          {referencePoints.map((point) => (
+            <span key={`${point.top}-${point.left}`} className="ref-point" style={{ top: point.top, left: point.left }} />
+          ))}
+        </div>
 
-      {locationPulses.map((pulse) => (
-        <span key={`${pulse.top}-${pulse.left}`} className="adein-location-pulse" style={{ top: pulse.top, left: pulse.left }} />
-      ))}
+        <div className="location-rings">
+          {locationPulses.map((pulse) => (
+            <span key={`${pulse.top}-${pulse.left}`} className="loc-ring" style={{ top: pulse.top, left: pulse.left }} />
+          ))}
+          {locationPulses.map((pulse) => (
+            <span key={`ring-b-${pulse.top}-${pulse.left}`} className="loc-ring ring-b" style={{ top: pulse.top, left: pulse.left }} />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
