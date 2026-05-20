@@ -28,13 +28,13 @@ input, select, textarea { width: 100%; border: 1px solid var(--border-soft); bor
 .role-switch button, .btn-outline, .tabs-row button { border: 1px solid var(--border-soft); border-radius: 12px; padding: .7rem .85rem; background: white; }
 .role-switch .active, .sidebar button.active, .tabs-row button.active { background: var(--bg-soft); border-color: var(--accent-green-soft); color: var(--accent-green-dark); }
 .btn-primary { border: none; background: linear-gradient(180deg, var(--accent-green), var(--accent-green-dark)); color: #fff; border-radius: 12px; padding: .85rem 1rem; font-weight: 600; }
-.app-shell { min-height: 100vh; display: grid; grid-template-columns: 290px 1fr; position: relative; z-index: 0; }
+.app-shell { min-height: 100vh; display: grid; grid-template-columns: 290px minmax(0, 1fr); position: relative; z-index: 0; }
 .sidebar { padding: 1.4rem; border-right: 1px solid var(--border-soft); background: rgba(255,255,255,0.72); backdrop-filter: blur(4px); }
 .brand-stack p { margin: .2rem 0 1.2rem; color: var(--text-muted); font-size: .85rem; }
 .logo-mini { width: 130px; }
 .sidebar nav { display: grid; gap: .55rem; }
 .sidebar nav button { text-align: left; border: 1px solid transparent; background: transparent; padding: .75rem .8rem; border-radius: 10px; color: var(--text-muted); font-weight: 600; }
-.main-panel { padding: 1.2rem 1.4rem 1.8rem; position: relative; z-index: 2; }
+.main-panel { padding: 1.2rem 1.4rem 1.8rem; position: relative; z-index: 2; min-width: 0; }
 .app-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1rem; padding: .85rem 1rem; background: rgba(255,255,255,.72); border: 1px solid var(--border-soft); border-radius: 16px; }
 .header-main { display: flex; gap: .8rem; align-items: center; }
 .app-header h1 { margin: 0; font-size: 1.25rem; }
@@ -84,11 +84,11 @@ th, td { padding: .8rem; border-bottom: 1px solid var(--border-soft); text-align
     left: 0;
     width: min(82vw, 320px);
     height: 100dvh;
-    z-index: 50;
+    z-index: 1000;
     border-right: 1px solid var(--border-soft);
     border-bottom: 0;
     transform: translateX(-100%);
-    transition: transform .22s ease;
+    transition: transform 180ms ease;
     box-shadow: 0 14px 34px rgba(0,0,0,.18);
     overflow-y: auto;
     padding-top: .95rem;
@@ -98,9 +98,9 @@ th, td { padding: .8rem; border-bottom: 1px solid var(--border-soft); text-align
     display: block;
     position: fixed;
     inset: 0;
-    z-index: 40;
+    z-index: 900;
     border: 0;
-    background: rgba(8, 20, 14, 0.42);
+    background: rgba(0,0,0,.28);
     opacity: 0;
     pointer-events: none;
     transition: opacity .2s ease;
@@ -124,20 +124,28 @@ th, td { padding: .8rem; border-bottom: 1px solid var(--border-soft); text-align
   .sidebar-logout { display: block; border: 1px solid rgba(166,75,75,.35); color: var(--danger); background: #fff; }
   .sidebar-close { min-height: 38px; width: auto; }
 
-  .main-panel { padding: .7rem .8rem 1.2rem; }
-  .app-header {
-    position: sticky;
-    top: .45rem;
-    z-index: 30;
-    margin-bottom: .7rem;
-    display: grid;
-    grid-template-columns: 1fr auto;
-    align-items: center;
-    padding: .58rem .68rem;
-    gap: .45rem .65rem;
+  .main-panel {
+    margin: 0;
+    width: 100%;
+    min-height: auto;
+    display: block;
+    padding: 12px;
+    padding-top: 12px;
   }
-  .header-main { width: 100%; min-width: 0; gap: .55rem; }
-  .app-header h1 { font-size: .93rem; line-height: 1.2; }
+  .app-header {
+    position: relative;
+    top: 0;
+    z-index: 20;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .header-main { width: 100%; min-width: 0; gap: 8px; }
+  .header-copy { min-width: 0; }
+  .app-header h1 { font-size: .93rem; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .header-logo { display: block; }
   .header-icon { display: none; }
   .header-subtitle { display: none; }
@@ -156,14 +164,13 @@ th, td { padding: .8rem; border-bottom: 1px solid var(--border-soft); text-align
 }
 
 @media (max-width: 520px) {
-  .main-panel { padding: .65rem .65rem 1rem; }
-  .app-header { top: .4rem; }
+  .main-panel { padding: 12px; }
 }
 
 .login-screen,
 .app-shell {
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 .login-card,
