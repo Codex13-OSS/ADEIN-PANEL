@@ -4,144 +4,196 @@
   overflow: hidden;
   pointer-events: none;
   z-index: 0;
-  background:
-    radial-gradient(circle at 14% 18%, rgba(114, 163, 136, 0.24), transparent 40%),
-    radial-gradient(circle at 84% 74%, rgba(114, 163, 136, 0.16), transparent 42%),
-    linear-gradient(165deg, #edf5ef 0%, #f8fbf8 52%, #edf4ef 100%);
 }
 
-.crm-animated-background.login-variant { opacity: 1; }
-.crm-animated-background.panel-variant { opacity: 0.72; }
+.crm-animated-background .login-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(135deg, #f0f4f1 0%, #e5ebe6 50%, #dae3dc 100%);
+}
 
-.crm-animated-background .login-background,
-.crm-animated-background .arch-grid,
-.crm-animated-background .grid-major,
-.crm-animated-background .grid-minor,
+.crm-animated-background .arch-grid {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  animation: grid-rotate 120s linear infinite;
+}
+
+.crm-animated-background .grid-major {
+  position: absolute;
+  width: 200%;
+  height: 200%;
+  top: -50%;
+  left: -50%;
+  background-image: linear-gradient(rgba(30, 124, 83, 0.08) 2px, transparent 2px), linear-gradient(90deg, rgba(30, 124, 83, 0.08) 2px, transparent 2px);
+  background-size: 100px 100px;
+  animation: grid-drift-1 20s ease-in-out infinite alternate;
+}
+
+.crm-animated-background .grid-minor {
+  position: absolute;
+  width: 200%;
+  height: 200%;
+  top: -50%;
+  left: -50%;
+  background-image: linear-gradient(rgba(30, 124, 83, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(30, 124, 83, 0.04) 1px, transparent 1px);
+  background-size: 50px 50px;
+  animation: grid-drift-2 15s ease-in-out infinite alternate;
+}
+
 .crm-animated-background .measuring-lines,
 .crm-animated-background .terrain-shapes,
 .crm-animated-background .reference-points,
 .crm-animated-background .location-rings {
   position: absolute;
-  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 
-.crm-animated-background .grid-major,
-.crm-animated-background .grid-minor {
-  inset: -10%;
-}
-
-.crm-animated-background .grid-major {
-  background-image:
-    linear-gradient(rgba(90, 137, 113, 0.15) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(90, 137, 113, 0.15) 1px, transparent 1px);
-  background-size: 88px 88px;
-  animation: grid-rotate 46s ease-in-out infinite alternate;
-}
-
-.crm-animated-background .grid-minor {
-  background-image:
-    linear-gradient(rgba(90, 137, 113, 0.09) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(90, 137, 113, 0.09) 1px, transparent 1px),
-    linear-gradient(130deg, rgba(90, 137, 113, 0.06) 1px, transparent 25%);
-  background-size: 34px 34px, 34px 34px, 160px 160px;
-  animation: grid-drift-1 30s ease-in-out infinite alternate;
-}
-
-.crm-animated-background .measuring-lines .m-line {
+.crm-animated-background .m-line {
   position: absolute;
+  background: rgba(30, 124, 83, 0.15);
 }
 
-.crm-animated-background .measuring-lines .m-line.horizontal {
-  left: 4%;
-  width: 92%;
+.crm-animated-background .m-h1,
+.crm-animated-background .m-h2,
+.crm-animated-background .m-h3 {
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(80, 128, 104, 0.24), transparent);
-  animation: scan-line 18s linear infinite;
+  width: 100%;
+  left: 0;
+  animation: scan-line 8s ease-in-out infinite;
 }
 
-.crm-animated-background .measuring-lines .m-line.vertical {
-  top: 5%;
+.crm-animated-background .m-v1,
+.crm-animated-background .m-v2,
+.crm-animated-background .m-v3 {
   width: 1px;
-  height: 90%;
-  background: linear-gradient(180deg, transparent, rgba(80, 128, 104, 0.24), transparent);
-  animation: grid-drift-2 26s ease-in-out infinite alternate;
+  height: 100%;
+  top: 0;
+  animation: scan-line 8s ease-in-out infinite;
 }
 
-.crm-animated-background .terrain-shapes .lot {
+.crm-animated-background .m-h1 { top: 20%; animation-delay: 0s; }
+.crm-animated-background .m-h2 { top: 50%; animation-delay: 2.6s; }
+.crm-animated-background .m-h3 { top: 80%; animation-delay: 5.3s; }
+.crm-animated-background .m-v1 { left: 20%; animation-delay: 1.3s; }
+.crm-animated-background .m-v2 { left: 50%; animation-delay: 4s; }
+.crm-animated-background .m-v3 { left: 80%; animation-delay: 6.6s; }
+
+.crm-animated-background .lot {
   position: absolute;
-  border: 1px solid rgba(84, 132, 108, 0.24);
-  background: rgba(255, 255, 255, 0.18);
-  border-radius: 6px;
-  animation: lot-float 24s ease-in-out infinite;
+  background: rgba(30, 124, 83, 0.04);
+  border: 1px solid rgba(30, 124, 83, 0.12);
+  animation: lot-float 25s ease-in-out infinite;
 }
 
-.crm-animated-background .reference-points .ref-point {
+.crm-animated-background .lot-1 {
+  width: 300px;
+  height: 200px;
+  top: 10%;
+  left: 5%;
+  border-radius: 30% 70% 60% 40% / 60% 40% 60% 40%;
+  animation-delay: 0s;
+}
+.crm-animated-background .lot-2 {
+  width: 250px;
+  height: 250px;
+  top: 60%;
+  right: 8%;
+  border-radius: 50% 50% 40% 60% / 40% 60% 50% 50%;
+  animation-delay: 6s;
+}
+.crm-animated-background .lot-3 {
+  width: 180px;
+  height: 150px;
+  bottom: 15%;
+  left: 25%;
+  border-radius: 60% 40% 50% 50% / 50% 50% 40% 60%;
+  animation-delay: 12s;
+}
+.crm-animated-background .lot-4 {
+  width: 220px;
+  height: 180px;
+  top: 30%;
+  right: 20%;
+  border-radius: 40% 60% 60% 40% / 50% 40% 50% 60%;
+  animation-delay: 18s;
+}
+
+.crm-animated-background .ref-point {
   position: absolute;
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-  background: rgba(58, 106, 83, 0.35);
-  box-shadow: 0 0 0 0 rgba(58, 106, 83, 0.25);
-  animation: ref-pulse 5.6s ease-out infinite;
+  width: 12px;
+  height: 12px;
+  background: rgba(30, 124, 83, 0.25);
+  border: 2px solid rgba(30, 124, 83, 0.4);
+  border-radius: 50%;
+  animation: ref-pulse 3s ease-out infinite;
 }
 
-.crm-animated-background .location-rings .loc-ring {
+.crm-animated-background .ref-point::before,
+.crm-animated-background .ref-point::after {
+  content: '';
   position: absolute;
-  width: 14px;
-  height: 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(70, 118, 94, 0.28);
-  animation: loc-expand 5.8s ease-out infinite;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(30, 124, 83, 0.2);
+  border-radius: 50%;
+  opacity: 0;
 }
 
-.crm-animated-background.panel-variant .location-rings .loc-ring,
-.crm-animated-background.panel-variant .reference-points .ref-point,
-.crm-animated-background.panel-variant .terrain-shapes .lot {
-  opacity: 0.72;
+.crm-animated-background .ref-point::before {
+  width: 30px;
+  height: 30px;
+  animation: ring-expand 3s ease-out infinite;
 }
 
-.crm-animated-background .location-rings .loc-ring.ring-b {
-  animation-name: ring-expand;
-  animation-delay: 1.8s;
+.crm-animated-background .ref-point::after {
+  width: 50px;
+  height: 50px;
+  animation: ring-expand 3s ease-out infinite 0.5s;
 }
 
-@keyframes grid-rotate {
-  from { transform: rotate(-0.45deg) scale(1); }
-  to { transform: rotate(0.4deg) scale(1.02); }
+.crm-animated-background .rp-1 { top: 15%; left: 10%; animation-delay: 0s; }
+.crm-animated-background .rp-2 { top: 35%; left: 75%; animation-delay: 0.6s; }
+.crm-animated-background .rp-3 { top: 65%; left: 20%; animation-delay: 1.2s; }
+.crm-animated-background .rp-4 { top: 25%; left: 90%; animation-delay: 1.8s; }
+.crm-animated-background .rp-5 { top: 85%; left: 55%; animation-delay: 2.4s; }
+
+.crm-animated-background .loc-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(30, 124, 83, 0.15);
+  border-radius: 50%;
+  animation: loc-expand 6s ease-out infinite;
 }
 
-@keyframes grid-drift-1 {
-  from { transform: translate3d(-10px, -6px, 0); }
-  to { transform: translate3d(12px, 8px, 0); }
-}
+.crm-animated-background .loc-ring.lr-1 { width: 100px; height: 100px; animation-delay: 0s; }
+.crm-animated-background .loc-ring.lr-2 { width: 200px; height: 200px; animation-delay: 2s; }
+.crm-animated-background .loc-ring.lr-3 { width: 300px; height: 300px; animation-delay: 4s; }
 
-@keyframes grid-drift-2 {
-  from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(2px, 4px, 0); }
-}
-
-@keyframes scan-line {
-  0%, 100% { opacity: 0.45; transform: translateX(-1%); }
-  50% { opacity: 0.85; transform: translateX(1%); }
-}
-
+@keyframes grid-rotate { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+@keyframes grid-drift-1 { 0% { transform: translate(0, 0); } 100% { transform: translate(20px, 20px); } }
+@keyframes grid-drift-2 { 0% { transform: translate(0, 0); } 100% { transform: translate(-15px, -15px); } }
+@keyframes scan-line { 0%, 100% { opacity: 0.04; transform: scale(0.9); } 50% { opacity: 0.25; transform: scale(1); } }
 @keyframes lot-float {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-6px) scale(1.01); }
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(15px, -10px) rotate(2deg); }
+  50% { transform: translate(-5px, 15px) rotate(-1deg); }
+  75% { transform: translate(-10px, -5px) rotate(1deg); }
 }
-
-@keyframes ref-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(58, 106, 83, 0.28); }
-  70% { box-shadow: 0 0 0 9px rgba(58, 106, 83, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(58, 106, 83, 0); }
-}
-
-@keyframes ring-expand {
-  0% { transform: scale(0.85); opacity: 0.65; }
-  100% { transform: scale(2.2); opacity: 0; }
-}
-
+@keyframes ref-pulse { 0%, 100% { transform: scale(1); opacity: 0.4; } 50% { transform: scale(1.2); opacity: 0.8; } }
+@keyframes ring-expand { 0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.6; } 100% { transform: translate(-50%, -50%) scale(2); opacity: 0; } }
 @keyframes loc-expand {
-  0% { transform: scale(0.92); opacity: 0.58; }
-  100% { transform: scale(2.5); opacity: 0; }
+  0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.3; }
+  50% { opacity: 0.15; }
+  100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
 }
