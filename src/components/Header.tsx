@@ -18,13 +18,13 @@ function Header({ title, subtitle, role, username, onLogout, onMenuToggle }: Pro
           ☰
         </button>
         <img src="/brand/adein.png" alt="ADEIN" className="header-logo" />
-        <img src="/brand/casitas.png" alt="casitas" className="header-icon" />
         <div>
           <h1>{title}</h1>
-          <p>{subtitle}</p>
+          <p className="header-subtitle">{subtitle}</p>
           <small>{username}</small>
         </div>
       </div>
+      <img src="/brand/casitas.png" alt="casitas" className="header-icon" />
       <div className="header-right">
         <StatusBadge>{role === 'owner' ? 'Rol: Dueño / Admin' : 'Rol: Vendedor'}</StatusBadge>
         <StatusBadge tone="success">Panel mock activo</StatusBadge>
