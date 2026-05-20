@@ -9,6 +9,37 @@ const PROPERTY_PRIORITY_TERMS = ['lote', 'predio', 'terreno', 'ubicacion', 'prec
 const GENERIC_PROPERTY_PHRASES = ['vi el anuncio', 'hola', 'buen dia', 'buenas', 'info', 'informacion'];
 
 const normalize = (value: string) => value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const normalizeSpaces = (value: string) => value.replace(/\s+/g, ' ').trim();
+const PHONE_REGEX = /(?:\+?\s*52\s*)?(?:1\s*)?(?:\(?\s*\d{2}\s*\)?[\s-]*)?\d{4}[\s-]?\d{4}/g;
+
+const formatDetectedPhone = (value: string) => {
+  const trimmed = normalizeSpaces(value.replace(/[^\d+()\-\s]/g, ''));
+  const digits = trimmed.replace(/\D/g, '');
+  if (digits.length < 10) return '';
+
+  const local10 = digits.slice(-10);
+  const lada = local10.slice(0, 2);
+  const first = local10.slice(2, 6);
+  const second = local10.slice(6, 10);
+  const hasMxPrefix = digits.length > 10 || /^\s*\+/.test(trimmed);
+  return hasMxPrefix ? `+52 ${lada} ${first} ${second}` : `${lada} ${first} ${second}`;
+};
+
+const extractFirstPhone = (source: string) => {
+  const matches = source.match(PHONE_REGEX) ?? [];
+  for (const match of matches) {
+    const formatted = formatDetectedPhone(match);
+    if (formatted) return formatted;
+  }
+  return '';
+};
+
+const isPhoneLikeName = (value: string) => {
+  const normalized = value.replace(/\s+/g, '');
+  if (!/[\d]/.test(normalized)) return false;
+  const digits = value.replace(/\D/g, '');
+  return digits.length >= 9;
+};
 const cleanWhatsAppLine = (line: string) =>
   line
     .replace(/^\[?\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4},?\s+\d{1,2}:\d{2}(?::\d{2})?\s?(?:a\.?\s?m\.?|p\.?\s?m\.?)?\]?\s?-?\s*/i, '')
@@ -38,10 +69,15 @@ export function parseWhatsAppConversation(rawText: string, fallback: AnalyzedCon
     participantCount.set(name, (participantCount.get(name) ?? 0) + 1);
   }
 
-  const detectedName = [...participantCount.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? fallback.name;
+  const sortedParticipants = [...participantCount.entries()].sort((a, b) => b[1] - a[1]);
+  const namedParticipant = sortedParticipants.find(([name]) => !isPhoneLikeName(name))?.[0];
+  const detectedName = namedParticipant || (sortedParticipants.length ? 'Contacto WhatsApp' : fallback.name || 'Contacto WhatsApp');
 
-  const phoneMatch = text.match(/(?:\+?52[\s-]?)?(?:\(?\d{2}\)?[\s-]?)?\d{4}[\s-]?\d{4}|(?:\+?52[\s-]?)?\d{10}/);
-  const detectedPhone = phoneMatch?.[0]?.trim() || 'Por confirmar';
+  const speakerPhones = lines
+    .map((line) => line.match(/(?:\]|-\s)([^:]{2,40}):/)?.[1]?.trim() ?? '')
+    .map((speaker) => extractFirstPhone(speaker))
+    .filter(Boolean);
+  const detectedPhone = speakerPhones[0] || extractFirstPhone(text) || 'Por confirmar';
 
   const scoredPropertyLines = lines
     .map((line) => {
