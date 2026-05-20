@@ -15,6 +15,7 @@ type Props = {
   onSaveProspect: (analysis: AnalyzedConversation) => 'created' | 'duplicate';
   onCreateFollowup: (analysis: AnalyzedConversation) => 'created' | 'duplicate';
   onCompleteFollowup: (id: string) => void;
+  onResetCrmDemo: () => void;
 };
 
 const TAB_OPTIONS: { key: CrmTab; label: string }[] = [
@@ -24,7 +25,7 @@ const TAB_OPTIONS: { key: CrmTab; label: string }[] = [
   { key: 'acciones', label: 'Acciones recomendadas' },
 ];
 
-function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, followups, recommendedActions, analyzedConversation, onSaveProspect, onCreateFollowup, onCompleteFollowup }: Props) {
+function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, followups, recommendedActions, analyzedConversation, onSaveProspect, onCreateFollowup, onCompleteFollowup, onResetCrmDemo }: Props) {
   const [internalTab, setInternalTab] = useState<CrmTab>(activeTab);
   const [fileName, setFileName] = useState('');
   const [filePreview, setFilePreview] = useState('');
@@ -151,6 +152,9 @@ function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, follo
     <div className="page-grid">
       <SectionCard title="CRM de ventas guiado" subtitle={role === 'owner' ? 'Vista administrativa con control por vendedor' : 'Vista vendedor con foco en acción comercial'}>
         <div className="tabs-row">{TAB_OPTIONS.map((tab) => <button key={tab.key} className={currentTab === tab.key ? 'active' : ''} onClick={() => handleTabChange(tab.key)}>{tab.label}</button>)}</div>
+        <div className="inline-actions">
+          <button className="btn-outline" onClick={onResetCrmDemo}>Restablecer CRM demo</button>
+        </div>
       </SectionCard>
       {tabBody}
     </div>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Role } from './LoginView';
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -12,6 +12,7 @@ import SettingsPage from '../pages/SettingsPage';
 import { CrmTab } from '../pages/CrmPage';
 import AdeinAnimatedBackground from './AdeinAnimatedBackground';
 import { AnalyzedConversation, Followup, Prospect, RecommendedAction } from '../types/crm';
+import { clearCrmStorage, loadCrmStorage, saveCrmStorage } from '../lib/crmStorage';
 
 export type OwnerSection = 'dashboard' | 'crm' | 'business' | 'campaigns' | 'sellers' | 'documents' | 'settings';
 export type SellerSection = 'crm' | 'analyze' | 'followups' | 'performance' | 'documents';
@@ -52,8 +53,9 @@ function Shell({ session, defaultSection, onLogout }: Props) {
   const initialCrmTab = defaultSection in crmTabBySection ? crmTabBySection[defaultSection as keyof typeof crmTabBySection] : 'prospectos';
   const [activeSection, setActiveSection] = useState<OwnerSection | SellerSection>(defaultSection);
   const [activeCrmTab, setActiveCrmTab] = useState<CrmTab>(initialCrmTab);
-  const [prospects, setProspects] = useState<Prospect[]>(INITIAL_PROSPECTS);
-  const [followups, setFollowups] = useState<Followup[]>(INITIAL_FOLLOWUPS);
+  const [crmState] = useState(() => loadCrmStorage({ prospects: INITIAL_PROSPECTS, followups: INITIAL_FOLLOWUPS }));
+  const [prospects, setProspects] = useState<Prospect[]>(crmState.prospects);
+  const [followups, setFollowups] = useState<Followup[]>(crmState.followups);
 
   const recommendedActions = useMemo<RecommendedAction[]>(() => {
     const pendingFollowups = followups.filter((item) => !item.completed);
@@ -64,6 +66,11 @@ function Shell({ session, defaultSection, onLogout }: Props) {
       { id: 'action-crm-hygiene', priority: 'Baja', title: 'Actualizar estatus del CRM', reason: 'Mantener estatus y notas al día mejora la conversión del equipo.', suggestedAction: 'Registrar cada contacto después del seguimiento.' },
     ];
   }, [followups, prospects]);
+
+
+  useEffect(() => {
+    saveCrmStorage({ prospects, followups });
+  }, [prospects, followups]);
 
   const section = isSeller && activeSection !== 'documents' ? sectionByCrmTab[activeCrmTab] : activeSection;
 
@@ -112,6 +119,13 @@ function Shell({ session, defaultSection, onLogout }: Props) {
     setFollowups((previous) => previous.map((item) => item.id === id ? { ...item, completed: true } : item));
   };
 
+  const handleResetCrmDemo = () => {
+    if (typeof window !== 'undefined' && !window.confirm('¿Restablecer CRM demo a datos iniciales?')) return;
+    clearCrmStorage();
+    setProspects(INITIAL_PROSPECTS);
+    setFollowups(INITIAL_FOLLOWUPS);
+  };
+
   const handleSectionChange = (nextSection: OwnerSection | SellerSection) => {
     if (!isSeller) {
       setActiveSection(nextSection);
@@ -144,7 +158,7 @@ function Shell({ session, defaultSection, onLogout }: Props) {
 
   const renderPage = () => {
     if (section === 'dashboard') return <OwnerDashboardPage prospects={prospects} followups={followups} recommendedActions={recommendedActions} />;
-    if (section === 'crm' || section === 'analyze' || section === 'followups' || section === 'performance') return <CrmPage role={session.role} activeTab={activeCrmTab} onTabChange={setActiveCrmTab} prospects={prospects} followups={followups} recommendedActions={recommendedActions} analyzedConversation={MOCK_ANALYSIS} onSaveProspect={handleSaveProspect} onCreateFollowup={handleCreateFollowup} onCompleteFollowup={handleCompleteFollowup} />;
+    if (section === 'crm' || section === 'analyze' || section === 'followups' || section === 'performance') return <CrmPage role={session.role} activeTab={activeCrmTab} onTabChange={setActiveCrmTab} prospects={prospects} followups={followups} recommendedActions={recommendedActions} analyzedConversation={MOCK_ANALYSIS} onSaveProspect={handleSaveProspect} onCreateFollowup={handleCreateFollowup} onCompleteFollowup={handleCompleteFollowup} onResetCrmDemo={handleResetCrmDemo} />;
     if (section === 'business') return <CurrentBusinessPage />;
     if (section === 'campaigns') return <CampaignsPage />;
     if (section === 'sellers') return <SellersPage />;
