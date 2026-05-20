@@ -77,7 +77,10 @@ th, td { padding: .8rem; border-bottom: 1px solid var(--border-soft); text-align
 .file-preview { background: #f8fbf9; border: 1px solid var(--border-soft); border-radius: 12px; padding: .8rem; white-space: pre-wrap; }
 .assistant-card { background: linear-gradient(180deg,#f7fcf9,#eef7f1); border: 1px solid var(--accent-green-soft); border-radius: 14px; padding: 1rem; }
 @media (max-width: 1024px) {
-  .app-shell { grid-template-columns: 1fr; }
+  .app-shell {
+    grid-template-columns: 1fr;
+    position: relative;
+  }
   .sidebar {
     position: fixed;
     top: 0;
@@ -91,7 +94,9 @@ th, td { padding: .8rem; border-bottom: 1px solid var(--border-soft); text-align
     transition: transform 180ms ease;
     box-shadow: 0 14px 34px rgba(0,0,0,.18);
     overflow-y: auto;
-    padding-top: .95rem;
+    padding-top: env(safe-area-inset-top, .95rem);
+    display: flex;
+    flex-direction: column;
   }
   .sidebar.open { transform: translateX(0); }
   .sidebar-overlay {
@@ -100,16 +105,26 @@ th, td { padding: .8rem; border-bottom: 1px solid var(--border-soft); text-align
     inset: 0;
     z-index: 900;
     border: 0;
-    background: rgba(0,0,0,.28);
+    background: rgba(0,0,0,.38);
     opacity: 0;
     pointer-events: none;
     transition: opacity .2s ease;
+    cursor: pointer;
   }
   .sidebar-overlay.open { opacity: 1; pointer-events: auto; }
-  .sidebar-mobile-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: .9rem; }
-  .brand-stack { margin-bottom: .85rem; }
-  .header-right { flex-wrap: wrap; justify-content: flex-end; }
+  .sidebar-mobile-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: .9rem;
+    padding-top: .5rem;
+  }
+  .brand-stack { display: none; }
   .menu-toggle { display: inline-flex; align-items: center; justify-content: center; }
+  .main-panel {
+    grid-column: 1;
+    width: 100%;
+  }
 }
 
 
@@ -125,10 +140,13 @@ th, td { padding: .8rem; border-bottom: 1px solid var(--border-soft); text-align
   .sidebar-close { min-height: 38px; width: auto; }
 
   .main-panel {
+    grid-column: 1 / -1;
     margin: 0;
     width: 100%;
+    max-width: 100vw;
     min-height: auto;
     display: block;
+    overflow-x: hidden;
     padding: 12px;
     padding-top: 12px;
   }
@@ -171,6 +189,13 @@ th, td { padding: .8rem; border-bottom: 1px solid var(--border-soft); text-align
 .app-shell {
   position: relative;
   overflow-x: hidden;
+}
+
+.adein-animated-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
 }
 
 .login-card,

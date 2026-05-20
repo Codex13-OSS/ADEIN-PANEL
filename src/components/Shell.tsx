@@ -98,7 +98,7 @@ function Shell({ session, defaultSection, onLogout }: Props) {
         onChange={handleSectionChange}
         onLogout={onLogout}
         mobileOpen={mobileMenuOpen}
-        onCloseMobile={() => setMobileMenuOpen(false)}
+        onCloseMobile={() => setTimeout(() => setMobileMenuOpen(false), 80)}
       />
       <section className="main-panel">
         <Header

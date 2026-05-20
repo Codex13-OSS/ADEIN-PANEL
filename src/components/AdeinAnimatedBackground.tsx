@@ -4,7 +4,7 @@ type Props = {
 
 function AdeinAnimatedBackground({ variant = 'login' }: Props) {
   return (
-    <div className={`crm-animated-background ${variant}-variant`} aria-hidden="true">
+    <div className={`crm-animated-background adein-animated-bg ${variant}-variant`} aria-hidden="true">
       <div className="login-background">
         <div className="arch-grid">
           <div className="grid-major" />
