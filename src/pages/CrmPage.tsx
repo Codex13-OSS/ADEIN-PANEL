@@ -1,4 +1,5 @@
 import { ChangeEvent, useMemo, useState } from 'react';
+import { parseWhatsAppConversation } from '../lib/whatsappParser';
 import SectionCard from '../components/SectionCard';
 import { AnalyzedConversation, Followup, Prospect, RecommendedAction } from '../types/crm';
 
@@ -33,7 +34,9 @@ function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, follo
   const [followupFeedback, setFollowupFeedback] = useState('');
   const [copyFeedback, setCopyFeedback] = useState('');
   const [analysisFeedback, setAnalysisFeedback] = useState('');
-  const [lastAnalysisLabel, setLastAnalysisLabel] = useState('');
+  const [lastAnalysisLabel, setLastAnalysisLabel] = useState('Análisis demo');
+  const [pastedText, setPastedText] = useState('');
+  const [currentAnalysis, setCurrentAnalysis] = useState<AnalyzedConversation>(analyzedConversation);
 
   const currentTab = onTabChange ? activeTab : internalTab;
 
@@ -52,13 +55,17 @@ function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, follo
     const reader = new FileReader();
     reader.onload = () => {
       const text = String(reader.result ?? '');
-      setFilePreview(text.split('\n').slice(0, 5).join('\n'));
+      setFilePreview(text.split('\n').slice(0, 7).join('\n'));
+      const parsed = parseWhatsAppConversation(text, analyzedConversation);
+      setCurrentAnalysis(parsed);
+      setAnalysisFeedback(parsed === analyzedConversation ? 'No se detectó texto válido. Se mantiene análisis demo.' : 'Archivo analizado correctamente.');
+      setLastAnalysisLabel(`Archivo analizado: ${file.name}`);
     };
     reader.readAsText(file);
   };
 
   const handleCopyMessage = async () => {
-    const text = analyzedConversation.suggestedMessage;
+    const text = currentAnalysis.suggestedMessage;
     try {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(text);
@@ -80,8 +87,15 @@ function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, follo
   };
 
   const handleAnalyzeConversation = () => {
-    setAnalysisFeedback('Conversación analizada. Datos comerciales listos.');
-    setLastAnalysisLabel('Ahora');
+    const parsed = parseWhatsAppConversation(pastedText, analyzedConversation);
+    setCurrentAnalysis(parsed);
+    if (parsed === analyzedConversation) {
+      setAnalysisFeedback('No se detectó texto válido. Se mantiene análisis demo.');
+      setLastAnalysisLabel('Análisis demo');
+      return;
+    }
+    setAnalysisFeedback('Texto pegado analizado. Datos comerciales listos.');
+    setLastAnalysisLabel('Texto pegado analizado');
   };
 
   const tabBody = useMemo(() => {
@@ -112,28 +126,28 @@ function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, follo
             <span>Formato permitido: .txt / text/plain</span>
             <input id="whatsapp-file" type="file" accept=".txt,text/plain" onChange={handleFile} />
           </label>
-          {fileName ? <p className="file-state"><strong>{fileName}</strong> · Archivo listo para análisis mock.</p> : null}
+          {fileName ? <p className="file-state"><strong>{fileName}</strong> · Archivo cargado para análisis local.</p> : null}
           {filePreview ? <pre className="file-preview">{filePreview}</pre> : null}
-          <textarea rows={6} placeholder="O pega aquí la conversación manualmente"></textarea>
+          <textarea rows={6} placeholder="Pega aquí la conversación exportada o copiada de WhatsApp…" value={pastedText} onChange={(event) => setPastedText(event.target.value)}></textarea>
           <button className="btn-primary" onClick={handleAnalyzeConversation}>Analizar conversación</button>
           {analysisFeedback ? <p className="file-state">{analysisFeedback}</p> : null}
           {lastAnalysisLabel ? <p className="file-state"><strong>Último análisis:</strong> {lastAnalysisLabel}</p> : null}
           <div className="analysis-grid">
             {[
-              ['Nombre detectado', analyzedConversation.name], ['Teléfono detectado', analyzedConversation.phone], ['Predio de interés', analyzedConversation.property],
-              ['Presupuesto aproximado', analyzedConversation.budget], ['Intención', analyzedConversation.intention], ['Objeciones', analyzedConversation.objections],
-              ['Nivel de interés', analyzedConversation.interestLevel], ['Estatus sugerido', analyzedConversation.suggestedStatus], ['Próxima acción', analyzedConversation.nextAction],
-              ['Fecha sugerida de seguimiento', analyzedConversation.suggestedFollowupDate], ['Resumen comercial', analyzedConversation.summary],
+              ['Nombre detectado', currentAnalysis.name], ['Teléfono detectado', currentAnalysis.phone], ['Predio de interés', currentAnalysis.property],
+              ['Presupuesto aproximado', currentAnalysis.budget], ['Intención', currentAnalysis.intention], ['Objeciones', currentAnalysis.objections],
+              ['Nivel de interés', currentAnalysis.interestLevel], ['Estatus sugerido', currentAnalysis.suggestedStatus], ['Próxima acción', currentAnalysis.nextAction],
+              ['Fecha sugerida de seguimiento', currentAnalysis.suggestedFollowupDate], ['Resumen comercial', currentAnalysis.summary],
             ].map(([k, v]) => <article key={k} className="analysis-item"><h4>{k}</h4><p>{v}</p></article>)}
           </div>
           <article className="assistant-card">
             <h3>Asistente de seguimiento</h3>
             <p><strong>Prioridad:</strong> Alta</p>
-            <p><strong>Acción recomendada:</strong> {analyzedConversation.nextAction}</p>
-            <p><strong>Mensaje sugerido:</strong> “{analyzedConversation.suggestedMessage}”</p>
-            <p><strong>Seguimiento recomendado:</strong> {analyzedConversation.suggestedFollowupDate}</p>
+            <p><strong>Acción recomendada:</strong> {currentAnalysis.nextAction}</p>
+            <p><strong>Mensaje sugerido:</strong> “{currentAnalysis.suggestedMessage}”</p>
+            <p><strong>Seguimiento recomendado:</strong> {currentAnalysis.suggestedFollowupDate}</p>
           </article>
-          <div className="inline-actions"><button className="btn-primary" onClick={() => { const result = onSaveProspect(analyzedConversation); setSaveFeedback(result === 'created' ? 'Prospecto agregado al CRM.' : 'Este prospecto ya existe en CRM.'); }}>Guardar como prospecto</button><button className="btn-outline" onClick={() => { const result = onCreateFollowup(analyzedConversation); setFollowupFeedback(result === 'created' ? 'Seguimiento agregado.' : 'Seguimiento ya existente.'); }}>Crear seguimiento</button><button className="btn-outline" onClick={handleCopyMessage}>Copiar mensaje sugerido</button></div>
+          <div className="inline-actions"><button className="btn-primary" onClick={() => { const result = onSaveProspect(currentAnalysis); setSaveFeedback(result === 'created' ? 'Prospecto agregado al CRM.' : 'Este prospecto ya existe en CRM.'); }}>Guardar como prospecto</button><button className="btn-outline" onClick={() => { const result = onCreateFollowup(currentAnalysis); setFollowupFeedback(result === 'created' ? 'Seguimiento agregado.' : 'Seguimiento ya existente.'); }}>Crear seguimiento</button><button className="btn-outline" onClick={handleCopyMessage}>Copiar mensaje sugerido</button></div>
           {saveFeedback ? <p className="file-state">{saveFeedback}</p> : null}
           {followupFeedback ? <p className="file-state">{followupFeedback}</p> : null}
           {copyFeedback ? <p className="file-state">{copyFeedback}</p> : null}
@@ -146,7 +160,7 @@ function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, follo
     }
 
     return <SectionCard title="Acciones recomendadas" subtitle="Motor visual de enfoque comercial diario"><div className="analysis-grid">{recommendedActions.map((item) => <article className="analysis-item" key={item.id}><h4>{item.title}</h4><p><strong>Prioridad:</strong> {item.priority}</p><p><strong>Motivo:</strong> {item.reason}</p><p><strong>Acción sugerida:</strong> {item.suggestedAction}</p><button className="btn-outline">Ejecutar acción mock</button></article>)}</div></SectionCard>;
-  }, [currentTab, fileName, filePreview, prospects, analyzedConversation, saveFeedback, followupFeedback, copyFeedback, followups, onCompleteFollowup, recommendedActions, onCreateFollowup, onSaveProspect]);
+  }, [currentTab, fileName, filePreview, prospects, currentAnalysis, saveFeedback, followupFeedback, copyFeedback, followups, onCompleteFollowup, recommendedActions, onCreateFollowup, onSaveProspect, pastedText, analysisFeedback, lastAnalysisLabel]);
 
   return (
     <div className="page-grid">
