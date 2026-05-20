@@ -1,0 +1,147 @@
+.crm-animated-background {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(circle at 14% 18%, rgba(114, 163, 136, 0.24), transparent 40%),
+    radial-gradient(circle at 84% 74%, rgba(114, 163, 136, 0.16), transparent 42%),
+    linear-gradient(165deg, #edf5ef 0%, #f8fbf8 52%, #edf4ef 100%);
+}
+
+.crm-animated-background.login-variant { opacity: 1; }
+.crm-animated-background.panel-variant { opacity: 0.72; }
+
+.crm-animated-background .login-background,
+.crm-animated-background .arch-grid,
+.crm-animated-background .grid-major,
+.crm-animated-background .grid-minor,
+.crm-animated-background .measuring-lines,
+.crm-animated-background .terrain-shapes,
+.crm-animated-background .reference-points,
+.crm-animated-background .location-rings {
+  position: absolute;
+  inset: 0;
+}
+
+.crm-animated-background .grid-major,
+.crm-animated-background .grid-minor {
+  inset: -10%;
+}
+
+.crm-animated-background .grid-major {
+  background-image:
+    linear-gradient(rgba(90, 137, 113, 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(90, 137, 113, 0.15) 1px, transparent 1px);
+  background-size: 88px 88px;
+  animation: grid-rotate 46s ease-in-out infinite alternate;
+}
+
+.crm-animated-background .grid-minor {
+  background-image:
+    linear-gradient(rgba(90, 137, 113, 0.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(90, 137, 113, 0.09) 1px, transparent 1px),
+    linear-gradient(130deg, rgba(90, 137, 113, 0.06) 1px, transparent 25%);
+  background-size: 34px 34px, 34px 34px, 160px 160px;
+  animation: grid-drift-1 30s ease-in-out infinite alternate;
+}
+
+.crm-animated-background .measuring-lines .m-line {
+  position: absolute;
+}
+
+.crm-animated-background .measuring-lines .m-line.horizontal {
+  left: 4%;
+  width: 92%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(80, 128, 104, 0.24), transparent);
+  animation: scan-line 18s linear infinite;
+}
+
+.crm-animated-background .measuring-lines .m-line.vertical {
+  top: 5%;
+  width: 1px;
+  height: 90%;
+  background: linear-gradient(180deg, transparent, rgba(80, 128, 104, 0.24), transparent);
+  animation: grid-drift-2 26s ease-in-out infinite alternate;
+}
+
+.crm-animated-background .terrain-shapes .lot {
+  position: absolute;
+  border: 1px solid rgba(84, 132, 108, 0.24);
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  animation: lot-float 24s ease-in-out infinite;
+}
+
+.crm-animated-background .reference-points .ref-point {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(58, 106, 83, 0.35);
+  box-shadow: 0 0 0 0 rgba(58, 106, 83, 0.25);
+  animation: ref-pulse 5.6s ease-out infinite;
+}
+
+.crm-animated-background .location-rings .loc-ring {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(70, 118, 94, 0.28);
+  animation: loc-expand 5.8s ease-out infinite;
+}
+
+.crm-animated-background.panel-variant .location-rings .loc-ring,
+.crm-animated-background.panel-variant .reference-points .ref-point,
+.crm-animated-background.panel-variant .terrain-shapes .lot {
+  opacity: 0.72;
+}
+
+.crm-animated-background .location-rings .loc-ring.ring-b {
+  animation-name: ring-expand;
+  animation-delay: 1.8s;
+}
+
+@keyframes grid-rotate {
+  from { transform: rotate(-0.45deg) scale(1); }
+  to { transform: rotate(0.4deg) scale(1.02); }
+}
+
+@keyframes grid-drift-1 {
+  from { transform: translate3d(-10px, -6px, 0); }
+  to { transform: translate3d(12px, 8px, 0); }
+}
+
+@keyframes grid-drift-2 {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(2px, 4px, 0); }
+}
+
+@keyframes scan-line {
+  0%, 100% { opacity: 0.45; transform: translateX(-1%); }
+  50% { opacity: 0.85; transform: translateX(1%); }
+}
+
+@keyframes lot-float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-6px) scale(1.01); }
+}
+
+@keyframes ref-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(58, 106, 83, 0.28); }
+  70% { box-shadow: 0 0 0 9px rgba(58, 106, 83, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(58, 106, 83, 0); }
+}
+
+@keyframes ring-expand {
+  0% { transform: scale(0.85); opacity: 0.65; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+@keyframes loc-expand {
+  0% { transform: scale(0.92); opacity: 0.58; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
