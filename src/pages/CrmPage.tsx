@@ -30,6 +30,7 @@ function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, follo
   const [internalTab, setInternalTab] = useState<CrmTab>(activeTab);
   const [fileName, setFileName] = useState('');
   const [filePreview, setFilePreview] = useState('');
+  const [fileText, setFileText] = useState('');
   const [saveFeedback, setSaveFeedback] = useState('');
   const [followupFeedback, setFollowupFeedback] = useState('');
   const [copyFeedback, setCopyFeedback] = useState('');
@@ -55,6 +56,7 @@ function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, follo
     const reader = new FileReader();
     reader.onload = () => {
       const text = String(reader.result ?? '');
+      setFileText(text);
       setFilePreview(text.split('\n').slice(0, 7).join('\n'));
       const parsed = parseWhatsAppConversation(text, analyzedConversation);
       setCurrentAnalysis(parsed);
@@ -87,15 +89,22 @@ function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, follo
   };
 
   const handleAnalyzeConversation = () => {
-    const parsed = parseWhatsAppConversation(pastedText, analyzedConversation);
+    const pastedInput = pastedText.trim();
+    const fileInput = fileText.trim();
+    const sourceText = pastedInput || fileInput;
+    const parsed = parseWhatsAppConversation(sourceText, analyzedConversation);
     setCurrentAnalysis(parsed);
     if (parsed === analyzedConversation) {
       setAnalysisFeedback('No se detectó texto válido. Se mantiene análisis demo.');
-      setLastAnalysisLabel('Análisis demo');
       return;
     }
-    setAnalysisFeedback('Texto pegado analizado. Datos comerciales listos.');
-    setLastAnalysisLabel('Texto pegado analizado');
+    if (pastedInput) {
+      setAnalysisFeedback('Texto pegado analizado. Datos comerciales listos.');
+      setLastAnalysisLabel('Texto pegado analizado');
+      return;
+    }
+    setAnalysisFeedback('Archivo analizado correctamente.');
+    setLastAnalysisLabel(`Archivo analizado: ${fileName || 'archivo .txt'}`);
   };
 
   const tabBody = useMemo(() => {
@@ -129,7 +138,7 @@ function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, follo
           {fileName ? <p className="file-state"><strong>{fileName}</strong> · Archivo cargado para análisis local.</p> : null}
           {filePreview ? <pre className="file-preview">{filePreview}</pre> : null}
           <textarea rows={6} placeholder="Pega aquí la conversación exportada o copiada de WhatsApp…" value={pastedText} onChange={(event) => setPastedText(event.target.value)}></textarea>
-          <button className="btn-primary" onClick={handleAnalyzeConversation}>Analizar conversación</button>
+          <button className="btn-primary" onClick={handleAnalyzeConversation}>Analizar conversación cargada</button>
           {analysisFeedback ? <p className="file-state">{analysisFeedback}</p> : null}
           {lastAnalysisLabel ? <p className="file-state"><strong>Último análisis:</strong> {lastAnalysisLabel}</p> : null}
           <div className="analysis-grid">
@@ -160,7 +169,7 @@ function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, follo
     }
 
     return <SectionCard title="Acciones recomendadas" subtitle="Motor visual de enfoque comercial diario"><div className="analysis-grid">{recommendedActions.map((item) => <article className="analysis-item" key={item.id}><h4>{item.title}</h4><p><strong>Prioridad:</strong> {item.priority}</p><p><strong>Motivo:</strong> {item.reason}</p><p><strong>Acción sugerida:</strong> {item.suggestedAction}</p><button className="btn-outline">Ejecutar acción mock</button></article>)}</div></SectionCard>;
-  }, [currentTab, fileName, filePreview, prospects, currentAnalysis, saveFeedback, followupFeedback, copyFeedback, followups, onCompleteFollowup, recommendedActions, onCreateFollowup, onSaveProspect, pastedText, analysisFeedback, lastAnalysisLabel]);
+  }, [currentTab, fileName, filePreview, prospects, currentAnalysis, saveFeedback, followupFeedback, copyFeedback, followups, onCompleteFollowup, recommendedActions, onCreateFollowup, onSaveProspect, pastedText, analysisFeedback, lastAnalysisLabel, fileText]);
 
   return (
     <div className="page-grid">
