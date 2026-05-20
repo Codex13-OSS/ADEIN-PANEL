@@ -16,10 +16,10 @@ const ownerNav: NavItem[] = [
 ];
 
 const sellerNav: NavItem[] = [
-  { key: 'crm', label: 'Mi CRM' },
-  { key: 'analyze', label: 'Analizar conversación' },
-  { key: 'followups', label: 'Mis seguimientos' },
-  { key: 'performance', label: 'Mi desempeño' },
+  { key: 'crm', label: 'Prospectos' },
+  { key: 'analyze', label: 'Analizar WhatsApp' },
+  { key: 'followups', label: 'Seguimientos' },
+  { key: 'performance', label: 'Acciones recomendadas' },
   { key: 'documents', label: 'Documentos' },
 ];
 
@@ -29,7 +29,10 @@ function Sidebar({ role, current, onChange }: Props) {
   const nav = role === 'owner' ? ownerNav : sellerNav;
   return (
     <aside className="sidebar">
-      <img src="/brand/logo.png" alt="ADEIN" className="logo-mini" />
+      <div className="brand-stack">
+        <img src="/brand/adein.png" alt="ADEIN" className="logo-mini" />
+        <p>Panel comercial inmobiliario</p>
+      </div>
       <nav>
         {nav.map((item) => (
           <button key={item.key} onClick={() => onChange(item.key)} className={current === item.key ? 'active' : ''}>
