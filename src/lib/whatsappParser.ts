@@ -37,7 +37,7 @@ export function parseWhatsAppConversation(rawText: string, fallback: AnalyzedCon
   const detectedPhone = phoneMatch?.[0]?.trim() || fallback.phone;
 
   const normalizedLines = lines.map((line) => normalize(line));
-  const propertyLine = lines.find((line, index) => PROPERTY_TERMS.some((term) => normalize(normalizedLines[index]).includes(normalize(term))));
+  const propertyLine = lines.find((_, index) => PROPERTY_TERMS.some((term) => normalize(normalizedLines[index]).includes(normalize(term))));
   const detectedProperty = propertyLine ? propertyLine.slice(0, 90) : fallback.property;
 
   const budgetMatch = text.match(/(?:\$\s?[\d,.]+\s?(?:mxn)?)|(?:\b\d+\s?mil\b)|(?:enganche[^\n.,]{0,35})|(?:mensualidad(?:es)?[^\n.,]{0,35})/i);
