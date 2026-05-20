@@ -197,3 +197,21 @@
   50% { opacity: 0.15; }
   100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
 }
+
+@media (max-width: 768px) {
+  .crm-animated-background .grid-major {
+    background-image: linear-gradient(rgba(30, 124, 83, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(30, 124, 83, 0.05) 1px, transparent 1px);
+    background-size: 120px 120px;
+  }
+
+  .crm-animated-background .grid-minor,
+  .crm-animated-background .measuring-lines,
+  .crm-animated-background .location-rings {
+    opacity: .55;
+  }
+
+  .crm-animated-background .lot,
+  .crm-animated-background .ref-point {
+    opacity: .72;
+  }
+}
