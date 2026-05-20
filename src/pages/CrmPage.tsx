@@ -1,5 +1,6 @@
 import { ChangeEvent, useMemo, useState } from 'react';
 import SectionCard from '../components/SectionCard';
+import { AnalyzedConversation, Followup, Prospect, RecommendedAction } from '../types/crm';
 
 export type CrmTab = 'prospectos' | 'whatsapp' | 'seguimientos' | 'acciones';
 
@@ -7,6 +8,13 @@ type Props = {
   activeTab?: CrmTab;
   onTabChange?: (tab: CrmTab) => void;
   role: 'owner' | 'seller';
+  prospects: Prospect[];
+  followups: Followup[];
+  recommendedActions: RecommendedAction[];
+  analyzedConversation: AnalyzedConversation;
+  onSaveProspect: (analysis: AnalyzedConversation) => void;
+  onCreateFollowup: (analysis: AnalyzedConversation) => void;
+  onCompleteFollowup: (id: string) => void;
 };
 
 const TAB_OPTIONS: { key: CrmTab; label: string }[] = [
@@ -16,10 +24,13 @@ const TAB_OPTIONS: { key: CrmTab; label: string }[] = [
   { key: 'acciones', label: 'Acciones recomendadas' },
 ];
 
-function CrmPage({ activeTab = 'prospectos', onTabChange, role }: Props) {
+function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, followups, recommendedActions, analyzedConversation, onSaveProspect, onCreateFollowup, onCompleteFollowup }: Props) {
   const [internalTab, setInternalTab] = useState<CrmTab>(activeTab);
   const [fileName, setFileName] = useState('');
   const [filePreview, setFilePreview] = useState('');
+  const [saveFeedback, setSaveFeedback] = useState('');
+  const [followupFeedback, setFollowupFeedback] = useState('');
+  const [copyFeedback, setCopyFeedback] = useState('');
 
   const currentTab = onTabChange ? activeTab : internalTab;
 
@@ -43,6 +54,28 @@ function CrmPage({ activeTab = 'prospectos', onTabChange, role }: Props) {
     reader.readAsText(file);
   };
 
+  const handleCopyMessage = async () => {
+    const text = analyzedConversation.suggestedMessage;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        setCopyFeedback('Mensaje copiado.');
+      } else {
+        throw new Error('Clipboard API no disponible');
+      }
+    } catch {
+      const area = document.createElement('textarea');
+      area.value = text;
+      area.style.position = 'fixed';
+      area.style.opacity = '0';
+      document.body.appendChild(area);
+      area.select();
+      document.execCommand('copy');
+      document.body.removeChild(area);
+      setCopyFeedback('Mensaje copiado con fallback.');
+    }
+  };
+
   const tabBody = useMemo(() => {
     if (currentTab === 'prospectos') {
       return (
@@ -55,8 +88,7 @@ function CrmPage({ activeTab = 'prospectos', onTabChange, role }: Props) {
           <div className="table-premium-wrap">
             <table className="table-premium"><thead><tr><th>Prospecto</th><th>Predio</th><th>Estatus</th><th>Vendedor</th><th>Último contacto</th><th>Próxima acción</th><th>Acciones</th></tr></thead>
               <tbody>
-                <tr><td>Prospecto Horizonte</td><td>Predio Norte</td><td><span className="badge">Interesado</span></td><td>Vendedor A</td><td>Hoy 10:30</td><td>Enviar ubicación</td><td><div className="inline-actions"><button className="btn-outline">WhatsApp</button><button className="btn-outline">Seguimiento</button><button className="btn-outline">Detalle</button></div></td></tr>
-                <tr><td>Prospecto Alameda</td><td>Predio Sur</td><td><span className="badge badge-warning">Cita agendada</span></td><td>Vendedor B</td><td>Ayer 17:15</td><td>Confirmar visita</td><td><div className="inline-actions"><button className="btn-outline">WhatsApp</button><button className="btn-outline">Seguimiento</button><button className="btn-outline">Detalle</button></div></td></tr>
+                {prospects.map((prospect) => <tr key={prospect.id}><td>{prospect.name}</td><td>{prospect.property}</td><td><span className="badge">{prospect.status}</span></td><td>{prospect.seller}</td><td>{prospect.lastContact}</td><td>{prospect.nextAction}</td><td><div className="inline-actions"><button className="btn-outline">WhatsApp</button><button className="btn-outline">Seguimiento</button><button className="btn-outline">Detalle</button></div></td></tr>)}
               </tbody>
             </table>
           </div>
@@ -78,40 +110,33 @@ function CrmPage({ activeTab = 'prospectos', onTabChange, role }: Props) {
           <button className="btn-primary">Analizar conversación</button>
           <div className="analysis-grid">
             {[
-              ['Nombre detectado', 'Prospecto Horizonte'], ['Teléfono detectado', 'Contacto móvil mock'], ['Predio de interés', 'Predio Norte'],
-              ['Presupuesto aproximado', '$680,000 MXN'], ['Intención', 'Compra en 30 días'], ['Objeciones', 'Tiempo de traslado'],
-              ['Nivel de interés', 'Alto'], ['Estatus sugerido', 'Interesado calificado'], ['Próxima acción', 'Agendar visita guiada'],
-              ['Fecha sugerida de seguimiento', 'Hoy 5:30 PM'], ['Resumen comercial', 'Lead con alta disposición de cierre si se confirma acceso y ubicación.'],
+              ['Nombre detectado', analyzedConversation.name], ['Teléfono detectado', analyzedConversation.phone], ['Predio de interés', analyzedConversation.property],
+              ['Presupuesto aproximado', analyzedConversation.budget], ['Intención', analyzedConversation.intention], ['Objeciones', analyzedConversation.objections],
+              ['Nivel de interés', analyzedConversation.interestLevel], ['Estatus sugerido', analyzedConversation.suggestedStatus], ['Próxima acción', analyzedConversation.nextAction],
+              ['Fecha sugerida de seguimiento', analyzedConversation.suggestedFollowupDate], ['Resumen comercial', analyzedConversation.summary],
             ].map(([k, v]) => <article key={k} className="analysis-item"><h4>{k}</h4><p>{v}</p></article>)}
           </div>
           <article className="assistant-card">
             <h3>Asistente de seguimiento</h3>
             <p><strong>Prioridad:</strong> Alta</p>
-            <p><strong>Acción recomendada:</strong> Agendar visita guiada</p>
-            <p><strong>Mensaje sugerido:</strong> “Hola, con gusto puedo apoyarle con disponibilidad y ubicación del predio. ¿Le parece si agendamos una visita?”</p>
-            <p><strong>Seguimiento recomendado:</strong> Hoy antes de las 6:00 PM</p>
+            <p><strong>Acción recomendada:</strong> {analyzedConversation.nextAction}</p>
+            <p><strong>Mensaje sugerido:</strong> “{analyzedConversation.suggestedMessage}”</p>
+            <p><strong>Seguimiento recomendado:</strong> {analyzedConversation.suggestedFollowupDate}</p>
           </article>
-          <div className="inline-actions"><button className="btn-primary">Guardar como prospecto</button><button className="btn-outline">Crear seguimiento</button><button className="btn-outline">Copiar mensaje sugerido</button></div>
+          <div className="inline-actions"><button className="btn-primary" onClick={() => { onSaveProspect(analyzedConversation); setSaveFeedback('Prospecto guardado o ya existente.'); }}>Guardar como prospecto</button><button className="btn-outline" onClick={() => { onCreateFollowup(analyzedConversation); setFollowupFeedback('Seguimiento creado o ya existente.'); }}>Crear seguimiento</button><button className="btn-outline" onClick={handleCopyMessage}>Copiar mensaje sugerido</button></div>
+          {saveFeedback ? <p className="file-state">{saveFeedback}</p> : null}
+          {followupFeedback ? <p className="file-state">{followupFeedback}</p> : null}
+          {copyFeedback ? <p className="file-state">{copyFeedback}</p> : null}
         </SectionCard>
       );
     }
 
     if (currentTab === 'seguimientos') {
-      return <SectionCard title="Seguimientos comerciales" subtitle="Prioriza acciones de hoy para no perder cierres"><div className="analysis-grid">{[
-        ['Pendiente de hoy', 'Prospecto Horizonte', 'Enviar ubicación y rango de precios', '11:30 AM', 'Alta'],
-        ['Vencido', 'Prospecto Alameda', 'Confirmar visita programada', 'Ayer 6:00 PM', 'Alta'],
-        ['Próximo', 'Prospecto Bosques', 'Llamada de validación de presupuesto', 'Mañana 10:00 AM', 'Media'],
-      ].map((item) => <article className="analysis-item" key={item[1]}><h4>{item[0]}</h4><p><strong>Prospecto:</strong> {item[1]}</p><p><strong>Acción sugerida:</strong> {item[2]}</p><p><strong>Hora sugerida:</strong> {item[3]}</p><p><strong>Prioridad:</strong> {item[4]}</p><button className="btn-outline">Marcar como realizado</button></article>)}</div></SectionCard>;
+      return <SectionCard title="Seguimientos comerciales" subtitle="Prioriza acciones de hoy para no perder cierres"><div className="analysis-grid">{followups.filter((item) => !item.completed).map((item) => <article className="analysis-item" key={item.id}><h4>{item.state}</h4><p><strong>Prospecto:</strong> {item.prospectName}</p><p><strong>Acción sugerida:</strong> {item.action}</p><p><strong>Hora sugerida:</strong> {item.suggestedTime}</p><p><strong>Prioridad:</strong> {item.priority}</p><button className="btn-outline" onClick={() => onCompleteFollowup(item.id)}>Marcar como realizado</button></article>)}</div></SectionCard>;
     }
 
-    return <SectionCard title="Acciones recomendadas" subtitle="Motor visual de enfoque comercial diario"><div className="analysis-grid">{[
-      ['Alta', 'Contactar interesados sin cita', 'Hay prospectos con intención alta sin visita asignada.', 'Enviar propuesta de horario hoy.'],
-      ['Media', 'Revisar prospectos con presupuesto definido', 'Ya calificaron rango de inversión, falta empuje comercial.', 'Compartir opciones por predio.'],
-      ['Alta', 'Agendar visita para leads calientes', 'Conversaciones recientes con señales de cierre cercano.', 'Confirmar visita guiada este día.'],
-      ['Media', 'Dar seguimiento a no respondidos', 'No hubo respuesta en últimas 48 horas.', 'Enviar recordatorio corto y directo.'],
-      ['Baja', 'Actualizar estatus de conversaciones analizadas', 'Mantener CRM limpio mejora decisiones del equipo.', 'Registrar estatus sugerido en cada lead.'],
-    ].map((item) => <article className="analysis-item" key={item[1]}><h4>{item[1]}</h4><p><strong>Prioridad:</strong> {item[0]}</p><p><strong>Motivo:</strong> {item[2]}</p><p><strong>Acción sugerida:</strong> {item[3]}</p><button className="btn-outline">Ejecutar acción mock</button></article>)}</div></SectionCard>;
-  }, [currentTab, fileName, filePreview]);
+    return <SectionCard title="Acciones recomendadas" subtitle="Motor visual de enfoque comercial diario"><div className="analysis-grid">{recommendedActions.map((item) => <article className="analysis-item" key={item.id}><h4>{item.title}</h4><p><strong>Prioridad:</strong> {item.priority}</p><p><strong>Motivo:</strong> {item.reason}</p><p><strong>Acción sugerida:</strong> {item.suggestedAction}</p><button className="btn-outline">Ejecutar acción mock</button></article>)}</div></SectionCard>;
+  }, [currentTab, fileName, filePreview, prospects, analyzedConversation, saveFeedback, followupFeedback, copyFeedback, followups, onCompleteFollowup, recommendedActions, onCreateFollowup, onSaveProspect]);
 
   return (
     <div className="page-grid">
