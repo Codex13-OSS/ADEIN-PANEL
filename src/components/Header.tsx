@@ -1,12 +1,23 @@
 import { Role } from './LoginView';
 import StatusBadge from './StatusBadge';
 
-type Props = { title: string; subtitle: string; role: Role; username: string; onLogout: () => void };
+type Props = {
+  title: string;
+  subtitle: string;
+  role: Role;
+  username: string;
+  onLogout: () => void;
+  onMenuToggle?: () => void;
+};
 
-function Header({ title, subtitle, role, username, onLogout }: Props) {
+function Header({ title, subtitle, role, username, onLogout, onMenuToggle }: Props) {
   return (
     <header className="app-header">
-      <div>
+      <div className="header-main">
+        <button className="menu-toggle" onClick={onMenuToggle} aria-label="Abrir menú de navegación">
+          ☰
+        </button>
+        <img src="/brand/adein.png" alt="ADEIN" className="header-logo" />
         <img src="/brand/casitas.png" alt="casitas" className="header-icon" />
         <div>
           <h1>{title}</h1>
