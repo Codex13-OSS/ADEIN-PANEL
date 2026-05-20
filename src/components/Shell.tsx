@@ -10,6 +10,7 @@ import SellersPage from '../pages/SellersPage';
 import DocumentsPage from '../pages/DocumentsPage';
 import SettingsPage from '../pages/SettingsPage';
 import { CrmTab } from '../pages/CrmPage';
+import AdeinAnimatedBackground from './AdeinAnimatedBackground';
 
 export type OwnerSection = 'dashboard' | 'crm' | 'business' | 'campaigns' | 'sellers' | 'documents' | 'settings';
 export type SellerSection = 'crm' | 'analyze' | 'followups' | 'performance' | 'documents';
@@ -77,7 +78,8 @@ function Shell({ session, defaultSection, onLogout }: Props) {
   };
 
   return (
-    <main className="app-shell technical-bg">
+    <main className="app-shell">
+      <AdeinAnimatedBackground variant="panel" />
       <Sidebar role={session.role} current={activeSection} activeCrmTab={activeCrmTab} onChange={handleSectionChange} />
       <section className="main-panel">
         <Header role={session.role} title={title} subtitle={subtitle} username={session.username} onLogout={onLogout} />
