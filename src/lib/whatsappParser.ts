@@ -5,8 +5,15 @@ const INTENT_HIGH = ['comprar', 'apartar', 'visitar', 'cita', 'ubicación', 'ubi
 const INTENT_MED = ['información', 'informacion', 'me interesa', 'detalles', 'quisiera saber', 'costos'];
 const OBJECTION_TERMS = ['precio', 'ubicación', 'ubicacion', 'enganche', 'papeles', 'escrituras', 'mensualidades', 'confianza', 'tiempo'];
 const PROPERTY_TERMS = ['predio', 'lote', 'terreno', 'parcela', 'hectárea', 'hectarea', 'm2', 'metros', 'norte', 'sur', 'ejido', 'financiamiento'];
+const PROPERTY_PRIORITY_TERMS = ['lote', 'predio', 'terreno', 'ubicacion', 'precio', 'disponibilidad', 'visitar', 'cita', 'norte', 'sur', 'ejido'];
+const GENERIC_PROPERTY_PHRASES = ['vi el anuncio', 'hola', 'buen dia', 'buenas', 'info', 'informacion'];
 
 const normalize = (value: string) => value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const cleanWhatsAppLine = (line: string) =>
+  line
+    .replace(/^\[?\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4},?\s+\d{1,2}:\d{2}(?::\d{2})?\s?(?:a\.?\s?m\.?|p\.?\s?m\.?)?\]?\s?-?\s*/i, '')
+    .replace(/^[^-:]{2,40}:\s*/, '')
+    .trim();
 
 const getTomorrow = () => {
   const date = new Date();
@@ -34,11 +41,37 @@ export function parseWhatsAppConversation(rawText: string, fallback: AnalyzedCon
   const detectedName = [...participantCount.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? fallback.name;
 
   const phoneMatch = text.match(/(?:\+?52[\s-]?)?(?:\(?\d{2}\)?[\s-]?)?\d{4}[\s-]?\d{4}|(?:\+?52[\s-]?)?\d{10}/);
-  const detectedPhone = phoneMatch?.[0]?.trim() || fallback.phone;
+  const detectedPhone = phoneMatch?.[0]?.trim() || 'Por confirmar';
 
-  const normalizedLines = lines.map((line) => normalize(line));
-  const propertyLine = lines.find((_, index) => PROPERTY_TERMS.some((term) => normalize(normalizedLines[index]).includes(normalize(term))));
-  const detectedProperty = propertyLine ? propertyLine.slice(0, 90) : fallback.property;
+  const scoredPropertyLines = lines
+    .map((line) => {
+      const cleaned = cleanWhatsAppLine(line);
+      const cleanedNormalized = normalize(cleaned);
+      const speakerMatch = line.match(/(?:\]|-\s)([^:]{2,40}):/);
+      const speaker = speakerMatch?.[1]?.trim() ?? '';
+      const isClientLikeSpeaker = speaker ? !NAME_EXCLUDE.some((term) => normalize(speaker).includes(term)) : false;
+
+      let score = 0;
+      for (const term of PROPERTY_TERMS) {
+        if (cleanedNormalized.includes(normalize(term))) score += 2;
+      }
+      for (const term of PROPERTY_PRIORITY_TERMS) {
+        if (cleanedNormalized.includes(term)) score += 3;
+      }
+      if (isClientLikeSpeaker) score += 2;
+      if (cleaned.length >= 25) score += 1;
+      if (GENERIC_PROPERTY_PHRASES.some((phrase) => cleanedNormalized.includes(phrase))) score -= 3;
+      if (cleanedNormalized.length < 8) score -= 2;
+
+      return { cleaned, score };
+    })
+    .filter((item) => item.cleaned);
+
+  const bestPropertyLine = scoredPropertyLines.sort((a, b) => b.score - a.score)[0];
+  const detectedProperty =
+    bestPropertyLine && bestPropertyLine.score > 0
+      ? bestPropertyLine.cleaned.slice(0, 90)
+      : 'Por confirmar';
 
   const budgetMatch = text.match(/(?:\$\s?[\d,.]+\s?(?:mxn)?)|(?:\b\d+\s?mil\b)|(?:enganche[^\n.,]{0,35})|(?:mensualidad(?:es)?[^\n.,]{0,35})/i);
   const detectedBudget = budgetMatch?.[0]?.trim() || 'Por confirmar';
