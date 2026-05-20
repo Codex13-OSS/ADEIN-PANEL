@@ -38,6 +38,7 @@ function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, follo
   const [lastAnalysisLabel, setLastAnalysisLabel] = useState('Análisis demo');
   const [pastedText, setPastedText] = useState('');
   const [currentAnalysis, setCurrentAnalysis] = useState<AnalyzedConversation>(analyzedConversation);
+  const [reviewAnalysis, setReviewAnalysis] = useState<AnalyzedConversation>(analyzedConversation);
 
   const currentTab = onTabChange ? activeTab : internalTab;
 
@@ -60,6 +61,7 @@ function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, follo
       setFilePreview(text.split('\n').slice(0, 7).join('\n'));
       const parsed = parseWhatsAppConversation(text, analyzedConversation);
       setCurrentAnalysis(parsed);
+      setReviewAnalysis(parsed);
       setAnalysisFeedback(parsed === analyzedConversation ? 'No se detectó texto válido. Se mantiene análisis demo.' : 'Archivo analizado correctamente.');
       setLastAnalysisLabel(`Archivo analizado: ${file.name}`);
     };
@@ -67,7 +69,7 @@ function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, follo
   };
 
   const handleCopyMessage = async () => {
-    const text = currentAnalysis.suggestedMessage;
+    const text = reviewAnalysis.suggestedMessage;
     try {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(text);
@@ -94,6 +96,7 @@ function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, follo
     const sourceText = pastedInput || fileInput;
     const parsed = parseWhatsAppConversation(sourceText, analyzedConversation);
     setCurrentAnalysis(parsed);
+    setReviewAnalysis(parsed);
     if (parsed === analyzedConversation) {
       setAnalysisFeedback('No se detectó texto válido. Se mantiene análisis demo.');
       return;
@@ -105,6 +108,10 @@ function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, follo
     }
     setAnalysisFeedback('Archivo analizado correctamente.');
     setLastAnalysisLabel(`Archivo analizado: ${fileName || 'archivo .txt'}`);
+  };
+
+  const updateReviewField = (field: keyof AnalyzedConversation, value: string) => {
+    setReviewAnalysis((current) => ({ ...current, [field]: value }));
   };
 
   const tabBody = useMemo(() => {
@@ -156,7 +163,21 @@ function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, follo
             <p><strong>Mensaje sugerido:</strong> “{currentAnalysis.suggestedMessage}”</p>
             <p><strong>Seguimiento recomendado:</strong> {currentAnalysis.suggestedFollowupDate}</p>
           </article>
-          <div className="inline-actions"><button className="btn-primary" onClick={() => { const result = onSaveProspect(currentAnalysis); setSaveFeedback(result === 'created' ? 'Prospecto agregado al CRM.' : 'Este prospecto ya existe en CRM.'); }}>Guardar como prospecto</button><button className="btn-outline" onClick={() => { const result = onCreateFollowup(currentAnalysis); setFollowupFeedback(result === 'created' ? 'Seguimiento agregado.' : 'Seguimiento ya existente.'); }}>Crear seguimiento</button><button className="btn-outline" onClick={handleCopyMessage}>Copiar mensaje sugerido</button></div>
+          <article className="assistant-card">
+            <h3>Revisar y completar antes de guardar</h3>
+            <p>Puedes corregir los datos detectados antes de guardarlos en el CRM.</p>
+            <div className="analysis-grid">
+              <label className="analysis-item"><h4>Nombre</h4><input value={reviewAnalysis.name} onChange={(event) => updateReviewField('name', event.target.value)} /></label>
+              <label className="analysis-item"><h4>Teléfono</h4><input value={reviewAnalysis.phone} onChange={(event) => updateReviewField('phone', event.target.value)} /></label>
+              <label className="analysis-item"><h4>Predio de interés</h4><input value={reviewAnalysis.property} onChange={(event) => updateReviewField('property', event.target.value)} /></label>
+              <label className="analysis-item"><h4>Presupuesto aproximado</h4><input value={reviewAnalysis.budget} onChange={(event) => updateReviewField('budget', event.target.value)} /></label>
+              <label className="analysis-item"><h4>Estatus sugerido</h4><input value={reviewAnalysis.suggestedStatus} onChange={(event) => updateReviewField('suggestedStatus', event.target.value)} /></label>
+              <label className="analysis-item"><h4>Próxima acción</h4><input value={reviewAnalysis.nextAction} onChange={(event) => updateReviewField('nextAction', event.target.value)} /></label>
+              <label className="analysis-item"><h4>Fecha de seguimiento</h4><input value={reviewAnalysis.suggestedFollowupDate} onChange={(event) => updateReviewField('suggestedFollowupDate', event.target.value)} /></label>
+              <label className="analysis-item"><h4>Mensaje sugerido</h4><textarea rows={4} value={reviewAnalysis.suggestedMessage} onChange={(event) => updateReviewField('suggestedMessage', event.target.value)} /></label>
+            </div>
+          </article>
+          <div className="inline-actions"><button className="btn-primary" onClick={() => { const result = onSaveProspect(reviewAnalysis); setSaveFeedback(result === 'created' ? 'Prospecto agregado al CRM.' : 'Este prospecto ya existe en CRM.'); }}>Guardar como prospecto</button><button className="btn-outline" onClick={() => { const result = onCreateFollowup(reviewAnalysis); setFollowupFeedback(result === 'created' ? 'Seguimiento agregado.' : 'Seguimiento ya existente.'); }}>Crear seguimiento</button><button className="btn-outline" onClick={handleCopyMessage}>Copiar mensaje sugerido</button></div>
           {saveFeedback ? <p className="file-state">{saveFeedback}</p> : null}
           {followupFeedback ? <p className="file-state">{followupFeedback}</p> : null}
           {copyFeedback ? <p className="file-state">{copyFeedback}</p> : null}
@@ -169,7 +190,7 @@ function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, follo
     }
 
     return <SectionCard title="Acciones recomendadas" subtitle="Motor visual de enfoque comercial diario"><div className="analysis-grid">{recommendedActions.map((item) => <article className="analysis-item" key={item.id}><h4>{item.title}</h4><p><strong>Prioridad:</strong> {item.priority}</p><p><strong>Motivo:</strong> {item.reason}</p><p><strong>Acción sugerida:</strong> {item.suggestedAction}</p><button className="btn-outline">Ejecutar acción mock</button></article>)}</div></SectionCard>;
-  }, [currentTab, fileName, filePreview, prospects, currentAnalysis, saveFeedback, followupFeedback, copyFeedback, followups, onCompleteFollowup, recommendedActions, onCreateFollowup, onSaveProspect, pastedText, analysisFeedback, lastAnalysisLabel, fileText]);
+  }, [currentTab, fileName, filePreview, prospects, currentAnalysis, reviewAnalysis, saveFeedback, followupFeedback, copyFeedback, followups, onCompleteFollowup, recommendedActions, onCreateFollowup, onSaveProspect, pastedText, analysisFeedback, lastAnalysisLabel, fileText]);
 
   return (
     <div className="page-grid">
