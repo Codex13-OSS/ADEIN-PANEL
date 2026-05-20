@@ -1,5 +1,6 @@
 import { Role } from './LoginView';
 import { OwnerSection, SellerSection } from './Shell';
+import { CrmTab } from '../pages/CrmPage';
 
 type AnySection = OwnerSection | SellerSection;
 
@@ -25,8 +26,18 @@ const sellerNav: NavItem[] = [
 
 type Props = { role: Role; current: AnySection; onChange: (section: AnySection) => void };
 
-function Sidebar({ role, current, onChange }: Props) {
+const sellerSectionByTab: Record<CrmTab, SellerSection> = {
+  prospectos: 'crm',
+  whatsapp: 'analyze',
+  seguimientos: 'followups',
+  acciones: 'performance',
+};
+
+type SidebarProps = Props & { activeCrmTab?: CrmTab };
+
+function Sidebar({ role, current, onChange, activeCrmTab = 'prospectos' }: SidebarProps) {
   const nav = role === 'owner' ? ownerNav : sellerNav;
+  const sellerCurrent = current === 'documents' ? 'documents' : sellerSectionByTab[activeCrmTab];
   return (
     <aside className="sidebar">
       <div className="brand-stack">
@@ -35,7 +46,7 @@ function Sidebar({ role, current, onChange }: Props) {
       </div>
       <nav>
         {nav.map((item) => (
-          <button key={item.key} onClick={() => onChange(item.key)} className={current === item.key ? 'active' : ''}>
+          <button key={item.key} onClick={() => onChange(item.key)} className={(role === 'seller' ? sellerCurrent : current) === item.key ? 'active' : ''}>
             {item.label}
           </button>
         ))}
