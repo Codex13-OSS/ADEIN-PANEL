@@ -1,23 +1,33 @@
 import DecisionCard from '../components/DecisionCard';
 import SectionCard from '../components/SectionCard';
 import StatCard from '../components/StatCard';
+import { Followup, Prospect, RecommendedAction } from '../types/crm';
 
-function OwnerDashboardPage() {
+type Props = {
+  prospects: Prospect[];
+  followups: Followup[];
+  recommendedActions: RecommendedAction[];
+};
+
+function OwnerDashboardPage({ prospects, followups, recommendedActions }: Props) {
+  const highIntention = prospects.filter((item) => item.intentionLevel === 'Alta').length;
+  const pendingFollowups = followups.filter((item) => !item.completed).length;
+
   return (
     <div className="page-grid">
       <section className="stats-grid">
         {[
-          ['Prospectos nuevos', '34'], ['Interesados', '21'], ['Citas agendadas', '14'], ['Separaciones', '5'],
-          ['Lotes libres', '47'], ['Lotes vendidos', '32'], ['Seguimientos vencidos', '5'], ['Conversión general', '24%'],
+          ['Prospectos totales', String(prospects.length)], ['Prospectos alta intención', String(highIntention)], ['Seguimientos pendientes', String(pendingFollowups)], ['Acciones recomendadas', String(recommendedActions.length)],
+          ['Lotes libres', '47'], ['Lotes vendidos', '32'], ['Seguimientos vencidos', String(followups.filter((item) => !item.completed && item.state === 'Vencido').length)], ['Conversión general', '24%'],
         ].map(([label, value]) => <StatCard key={label} label={label} value={value} />)}
       </section>
 
       <SectionCard title="Centro de decisiones" subtitle="Alertas comerciales prioritarias">
         <div className="decision-grid">
-          <DecisionCard level="high" title="Prioridad alta" description="8 prospectos interesados sin cita programada." />
-          <DecisionCard level="risk" title="Riesgo comercial" description="5 seguimientos vencidos hoy requieren contacto inmediato." />
+          <DecisionCard level="high" title="Prioridad alta" description={`${highIntention} prospectos con intención alta en CRM local.`} />
+          <DecisionCard level="risk" title="Riesgo comercial" description={`${pendingFollowups} seguimientos pendientes requieren contacto inmediato.`} />
           <DecisionCard level="opportunity" title="Oportunidad" description="Predio Norte concentra mayor intención de compra esta semana." />
-          <DecisionCard level="recommendation" title="Recomendación" description="Reasignar leads calientes al vendedor con mejor cierre." />
+          <DecisionCard level="recommendation" title="Recomendación" description={recommendedActions[0]?.suggestedAction ?? 'Priorizar seguimiento comercial del día.'} />
         </div>
       </SectionCard>
 

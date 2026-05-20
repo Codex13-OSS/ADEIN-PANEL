@@ -11,6 +11,7 @@ import DocumentsPage from '../pages/DocumentsPage';
 import SettingsPage from '../pages/SettingsPage';
 import { CrmTab } from '../pages/CrmPage';
 import AdeinAnimatedBackground from './AdeinAnimatedBackground';
+import { AnalyzedConversation, Followup, Prospect, RecommendedAction } from '../types/crm';
 
 export type OwnerSection = 'dashboard' | 'crm' | 'business' | 'campaigns' | 'sellers' | 'documents' | 'settings';
 export type SellerSection = 'crm' | 'analyze' | 'followups' | 'performance' | 'documents';
@@ -23,6 +24,23 @@ const sectionByCrmTab: Record<CrmTab, SellerSection> = {
   acciones: 'performance',
 };
 
+const MOCK_ANALYSIS: AnalyzedConversation = {
+  name: 'Prospecto Horizonte', phone: 'Contacto móvil mock', property: 'Predio Norte', budget: '$680,000 MXN', intention: 'Compra en 30 días', objections: 'Tiempo de traslado',
+  interestLevel: 'Alto', suggestedStatus: 'Interesado calificado', nextAction: 'Agendar visita guiada', suggestedFollowupDate: 'Hoy 5:30 PM',
+  summary: 'Lead con alta disposición de cierre si se confirma acceso y ubicación.', suggestedMessage: 'Hola, con gusto puedo apoyarle con disponibilidad y ubicación del predio. ¿Le parece si agendamos una visita?',
+};
+
+const INITIAL_PROSPECTS: Prospect[] = [
+  { id: 'prospect-horizonte', name: 'Prospecto Horizonte', phone: '555-0101', property: 'Predio Norte', status: 'Interesado', seller: 'Vendedor A', lastContact: 'Hoy 10:30', nextAction: 'Enviar ubicación', intentionLevel: 'Alta' },
+  { id: 'prospect-alameda', name: 'Prospecto Alameda', phone: '555-0102', property: 'Predio Sur', status: 'Cita agendada', seller: 'Vendedor B', lastContact: 'Ayer 17:15', nextAction: 'Confirmar visita', intentionLevel: 'Media' },
+];
+
+const INITIAL_FOLLOWUPS: Followup[] = [
+  { id: 'followup-horizonte', state: 'Pendiente de hoy', prospectName: 'Prospecto Horizonte', action: 'Enviar ubicación y rango de precios', suggestedTime: '11:30 AM', priority: 'Alta', completed: false },
+  { id: 'followup-alameda', state: 'Vencido', prospectName: 'Prospecto Alameda', action: 'Confirmar visita programada', suggestedTime: 'Ayer 6:00 PM', priority: 'Alta', completed: false },
+  { id: 'followup-bosques', state: 'Próximo', prospectName: 'Prospecto Bosques', action: 'Llamada de validación de presupuesto', suggestedTime: 'Mañana 10:00 AM', priority: 'Media', completed: false },
+];
+
 type Props = {
   session: { role: Role; username: string };
   defaultSection: OwnerSection | SellerSection;
@@ -34,8 +52,58 @@ function Shell({ session, defaultSection, onLogout }: Props) {
   const initialCrmTab = defaultSection in crmTabBySection ? crmTabBySection[defaultSection as keyof typeof crmTabBySection] : 'prospectos';
   const [activeSection, setActiveSection] = useState<OwnerSection | SellerSection>(defaultSection);
   const [activeCrmTab, setActiveCrmTab] = useState<CrmTab>(initialCrmTab);
+  const [prospects, setProspects] = useState<Prospect[]>(INITIAL_PROSPECTS);
+  const [followups, setFollowups] = useState<Followup[]>(INITIAL_FOLLOWUPS);
+
+  const recommendedActions = useMemo<RecommendedAction[]>(() => {
+    const pendingFollowups = followups.filter((item) => !item.completed);
+    const highIntention = prospects.filter((item) => item.intentionLevel === 'Alta');
+    return [
+      { id: 'action-high-intention', priority: 'Alta', title: 'Contactar interesados sin cita', reason: `${highIntention.length} prospectos con intención alta activos en CRM.`, suggestedAction: 'Enviar propuesta de horario hoy.' },
+      { id: 'action-pending-followup', priority: pendingFollowups.length > 3 ? 'Alta' : 'Media', title: 'Ejecutar seguimientos pendientes', reason: `${pendingFollowups.length} seguimientos pendientes sin cerrar.`, suggestedAction: 'Priorizar vencidos y pendientes de hoy.' },
+      { id: 'action-crm-hygiene', priority: 'Baja', title: 'Actualizar estatus del CRM', reason: 'Mantener estatus y notas al día mejora la conversión del equipo.', suggestedAction: 'Registrar cada contacto después del seguimiento.' },
+    ];
+  }, [followups, prospects]);
 
   const section = isSeller && activeSection !== 'documents' ? sectionByCrmTab[activeCrmTab] : activeSection;
+
+  const handleSaveProspect = (analysis: AnalyzedConversation) => {
+    setProspects((previous) => {
+      const duplicate = previous.some((item) => item.phone === analysis.phone || item.name.toLowerCase() === analysis.name.toLowerCase());
+      if (duplicate) return previous;
+      return [...previous, {
+        id: `prospect-${Date.now()}`,
+        name: analysis.name,
+        phone: analysis.phone,
+        property: analysis.property,
+        status: analysis.suggestedStatus,
+        seller: session.role === 'seller' ? session.username : 'Vendedor A',
+        lastContact: 'Ahora',
+        nextAction: analysis.nextAction,
+        intentionLevel: analysis.interestLevel === 'Alto' ? 'Alta' : analysis.interestLevel === 'Medio' ? 'Media' : 'Baja',
+      }];
+    });
+  };
+
+  const handleCreateFollowup = (analysis: AnalyzedConversation) => {
+    setFollowups((previous) => {
+      const duplicate = previous.some((item) => !item.completed && item.prospectName.toLowerCase() === analysis.name.toLowerCase() && item.action.toLowerCase() === analysis.nextAction.toLowerCase());
+      if (duplicate) return previous;
+      return [{
+        id: `followup-${Date.now()}`,
+        prospectName: analysis.name,
+        action: analysis.nextAction,
+        suggestedTime: analysis.suggestedFollowupDate,
+        priority: analysis.interestLevel === 'Alto' ? 'Alta' : analysis.interestLevel === 'Medio' ? 'Media' : 'Baja',
+        state: 'Pendiente de hoy',
+        completed: false,
+      }, ...previous];
+    });
+  };
+
+  const handleCompleteFollowup = (id: string) => {
+    setFollowups((previous) => previous.map((item) => item.id === id ? { ...item, completed: true } : item));
+  };
 
   const handleSectionChange = (nextSection: OwnerSection | SellerSection) => {
     if (!isSeller) {
@@ -68,8 +136,8 @@ function Shell({ session, defaultSection, onLogout }: Props) {
   }[section]), [section]);
 
   const renderPage = () => {
-    if (section === 'dashboard') return <OwnerDashboardPage />;
-    if (section === 'crm' || section === 'analyze' || section === 'followups' || section === 'performance') return <CrmPage role={session.role} activeTab={activeCrmTab} onTabChange={setActiveCrmTab} />;
+    if (section === 'dashboard') return <OwnerDashboardPage prospects={prospects} followups={followups} recommendedActions={recommendedActions} />;
+    if (section === 'crm' || section === 'analyze' || section === 'followups' || section === 'performance') return <CrmPage role={session.role} activeTab={activeCrmTab} onTabChange={setActiveCrmTab} prospects={prospects} followups={followups} recommendedActions={recommendedActions} analyzedConversation={MOCK_ANALYSIS} onSaveProspect={handleSaveProspect} onCreateFollowup={handleCreateFollowup} onCompleteFollowup={handleCompleteFollowup} />;
     if (section === 'business') return <CurrentBusinessPage />;
     if (section === 'campaigns') return <CampaignsPage />;
     if (section === 'sellers') return <SellersPage />;
