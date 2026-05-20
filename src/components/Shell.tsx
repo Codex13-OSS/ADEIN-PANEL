@@ -25,7 +25,7 @@ const sectionByCrmTab: Record<CrmTab, SellerSection> = {
 };
 
 const MOCK_ANALYSIS: AnalyzedConversation = {
-  name: 'Prospecto Horizonte', phone: 'Contacto móvil mock', property: 'Predio Norte', budget: '$680,000 MXN', intention: 'Compra en 30 días', objections: 'Tiempo de traslado',
+  name: 'Prospecto Cedros', phone: '555-0199', property: 'Predio Cedros', budget: '$680,000 MXN', intention: 'Compra en 30 días', objections: 'Tiempo de traslado',
   interestLevel: 'Alto', suggestedStatus: 'Interesado calificado', nextAction: 'Agendar visita guiada', suggestedFollowupDate: 'Hoy 5:30 PM',
   summary: 'Lead con alta disposición de cierre si se confirma acceso y ubicación.', suggestedMessage: 'Hola, con gusto puedo apoyarle con disponibilidad y ubicación del predio. ¿Le parece si agendamos una visita?',
 };
@@ -59,46 +59,53 @@ function Shell({ session, defaultSection, onLogout }: Props) {
     const pendingFollowups = followups.filter((item) => !item.completed);
     const highIntention = prospects.filter((item) => item.intentionLevel === 'Alta');
     return [
-      { id: 'action-high-intention', priority: 'Alta', title: 'Contactar interesados sin cita', reason: `${highIntention.length} prospectos con intención alta activos en CRM.`, suggestedAction: 'Enviar propuesta de horario hoy.' },
-      { id: 'action-pending-followup', priority: pendingFollowups.length > 3 ? 'Alta' : 'Media', title: 'Ejecutar seguimientos pendientes', reason: `${pendingFollowups.length} seguimientos pendientes sin cerrar.`, suggestedAction: 'Priorizar vencidos y pendientes de hoy.' },
+      { id: 'action-high-intention', priority: 'Alta', title: 'Contactar interesados sin cita', reason: `${prospects.length} prospectos activos en CRM; ${highIntention.length} con intención alta.`, suggestedAction: 'Enviar propuesta de horario hoy.' },
+      { id: 'action-pending-followup', priority: pendingFollowups.length > 3 ? 'Alta' : 'Media', title: 'Ejecutar seguimientos pendientes', reason: `${pendingFollowups.length} seguimientos pendientes requieren contacto esta jornada.`, suggestedAction: 'Priorizar vencidos y pendientes de hoy.' },
       { id: 'action-crm-hygiene', priority: 'Baja', title: 'Actualizar estatus del CRM', reason: 'Mantener estatus y notas al día mejora la conversión del equipo.', suggestedAction: 'Registrar cada contacto después del seguimiento.' },
     ];
   }, [followups, prospects]);
 
   const section = isSeller && activeSection !== 'documents' ? sectionByCrmTab[activeCrmTab] : activeSection;
 
-  const handleSaveProspect = (analysis: AnalyzedConversation) => {
-    setProspects((previous) => {
-      const duplicate = previous.some((item) => item.phone === analysis.phone || item.name.toLowerCase() === analysis.name.toLowerCase());
-      if (duplicate) return previous;
-      return [...previous, {
-        id: `prospect-${Date.now()}`,
-        name: analysis.name,
-        phone: analysis.phone,
-        property: analysis.property,
-        status: analysis.suggestedStatus,
-        seller: session.role === 'seller' ? session.username : 'Vendedor A',
-        lastContact: 'Ahora',
-        nextAction: analysis.nextAction,
-        intentionLevel: analysis.interestLevel === 'Alto' ? 'Alta' : analysis.interestLevel === 'Medio' ? 'Media' : 'Baja',
-      }];
-    });
+  const isGenericPhone = (phone: string) => {
+    const normalized = phone.trim().toLowerCase();
+    if (!normalized) return true;
+    return normalized.includes('mock') || normalized.includes('contacto móvil') || normalized.includes('contacto movil');
   };
 
-  const handleCreateFollowup = (analysis: AnalyzedConversation) => {
-    setFollowups((previous) => {
-      const duplicate = previous.some((item) => !item.completed && item.prospectName.toLowerCase() === analysis.name.toLowerCase() && item.action.toLowerCase() === analysis.nextAction.toLowerCase());
-      if (duplicate) return previous;
-      return [{
-        id: `followup-${Date.now()}`,
-        prospectName: analysis.name,
-        action: analysis.nextAction,
-        suggestedTime: analysis.suggestedFollowupDate,
-        priority: analysis.interestLevel === 'Alto' ? 'Alta' : analysis.interestLevel === 'Medio' ? 'Media' : 'Baja',
-        state: 'Pendiente de hoy',
-        completed: false,
-      }, ...previous];
-    });
+  const handleSaveProspect = (analysis: AnalyzedConversation): 'created' | 'duplicate' => {
+    const hasRealPhone = !isGenericPhone(analysis.phone);
+    const duplicate = hasRealPhone && prospects.some((item) => !isGenericPhone(item.phone) && item.phone.trim() === analysis.phone.trim());
+    if (duplicate) return 'duplicate';
+
+    setProspects((previous) => [...previous, {
+      id: `prospect-${Date.now()}`,
+      name: analysis.name,
+      phone: analysis.phone,
+      property: analysis.property,
+      status: analysis.suggestedStatus,
+      seller: session.role === 'seller' ? session.username : 'Vendedor A',
+      lastContact: 'Ahora',
+      nextAction: analysis.nextAction,
+      intentionLevel: analysis.interestLevel === 'Alto' ? 'Alta' : analysis.interestLevel === 'Medio' ? 'Media' : 'Baja',
+    }]);
+    return 'created';
+  };
+
+  const handleCreateFollowup = (analysis: AnalyzedConversation): 'created' | 'duplicate' => {
+    const duplicate = followups.some((item) => !item.completed && item.prospectName.toLowerCase() === analysis.name.toLowerCase() && item.action.toLowerCase() === analysis.nextAction.toLowerCase());
+    if (duplicate) return 'duplicate';
+
+    setFollowups((previous) => [{
+      id: `followup-${Date.now()}`,
+      prospectName: analysis.name,
+      action: analysis.nextAction,
+      suggestedTime: analysis.suggestedFollowupDate,
+      priority: analysis.interestLevel === 'Alto' ? 'Alta' : analysis.interestLevel === 'Medio' ? 'Media' : 'Baja',
+      state: 'Pendiente de hoy',
+      completed: false,
+    }, ...previous]);
+    return 'created';
   };
 
   const handleCompleteFollowup = (id: string) => {

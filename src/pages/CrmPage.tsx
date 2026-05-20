@@ -12,8 +12,8 @@ type Props = {
   followups: Followup[];
   recommendedActions: RecommendedAction[];
   analyzedConversation: AnalyzedConversation;
-  onSaveProspect: (analysis: AnalyzedConversation) => void;
-  onCreateFollowup: (analysis: AnalyzedConversation) => void;
+  onSaveProspect: (analysis: AnalyzedConversation) => 'created' | 'duplicate';
+  onCreateFollowup: (analysis: AnalyzedConversation) => 'created' | 'duplicate';
   onCompleteFollowup: (id: string) => void;
 };
 
@@ -31,6 +31,8 @@ function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, follo
   const [saveFeedback, setSaveFeedback] = useState('');
   const [followupFeedback, setFollowupFeedback] = useState('');
   const [copyFeedback, setCopyFeedback] = useState('');
+  const [analysisFeedback, setAnalysisFeedback] = useState('');
+  const [lastAnalysisLabel, setLastAnalysisLabel] = useState('');
 
   const currentTab = onTabChange ? activeTab : internalTab;
 
@@ -76,6 +78,11 @@ function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, follo
     }
   };
 
+  const handleAnalyzeConversation = () => {
+    setAnalysisFeedback('Conversación analizada. Datos comerciales listos.');
+    setLastAnalysisLabel('Ahora');
+  };
+
   const tabBody = useMemo(() => {
     if (currentTab === 'prospectos') {
       return (
@@ -107,7 +114,9 @@ function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, follo
           {fileName ? <p className="file-state"><strong>{fileName}</strong> · Archivo listo para análisis mock.</p> : null}
           {filePreview ? <pre className="file-preview">{filePreview}</pre> : null}
           <textarea rows={6} placeholder="O pega aquí la conversación manualmente"></textarea>
-          <button className="btn-primary">Analizar conversación</button>
+          <button className="btn-primary" onClick={handleAnalyzeConversation}>Analizar conversación</button>
+          {analysisFeedback ? <p className="file-state">{analysisFeedback}</p> : null}
+          {lastAnalysisLabel ? <p className="file-state"><strong>Último análisis:</strong> {lastAnalysisLabel}</p> : null}
           <div className="analysis-grid">
             {[
               ['Nombre detectado', analyzedConversation.name], ['Teléfono detectado', analyzedConversation.phone], ['Predio de interés', analyzedConversation.property],
@@ -123,7 +132,7 @@ function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, follo
             <p><strong>Mensaje sugerido:</strong> “{analyzedConversation.suggestedMessage}”</p>
             <p><strong>Seguimiento recomendado:</strong> {analyzedConversation.suggestedFollowupDate}</p>
           </article>
-          <div className="inline-actions"><button className="btn-primary" onClick={() => { onSaveProspect(analyzedConversation); setSaveFeedback('Prospecto guardado o ya existente.'); }}>Guardar como prospecto</button><button className="btn-outline" onClick={() => { onCreateFollowup(analyzedConversation); setFollowupFeedback('Seguimiento creado o ya existente.'); }}>Crear seguimiento</button><button className="btn-outline" onClick={handleCopyMessage}>Copiar mensaje sugerido</button></div>
+          <div className="inline-actions"><button className="btn-primary" onClick={() => { const result = onSaveProspect(analyzedConversation); setSaveFeedback(result === 'created' ? 'Prospecto agregado al CRM.' : 'Este prospecto ya existe en CRM.'); }}>Guardar como prospecto</button><button className="btn-outline" onClick={() => { const result = onCreateFollowup(analyzedConversation); setFollowupFeedback(result === 'created' ? 'Seguimiento agregado.' : 'Seguimiento ya existente.'); }}>Crear seguimiento</button><button className="btn-outline" onClick={handleCopyMessage}>Copiar mensaje sugerido</button></div>
           {saveFeedback ? <p className="file-state">{saveFeedback}</p> : null}
           {followupFeedback ? <p className="file-state">{followupFeedback}</p> : null}
           {copyFeedback ? <p className="file-state">{copyFeedback}</p> : null}

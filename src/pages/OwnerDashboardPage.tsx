@@ -32,7 +32,10 @@ function OwnerDashboardPage({ prospects, followups, recommendedActions }: Props)
       </SectionCard>
 
       <SectionCard title="Resumen ejecutivo inteligente">
-        <p className="executive-text">El foco operativo del día es convertir interesados en visitas guiadas. Se recomienda atender primero vencidos, confirmar citas de hoy y cerrar seguimiento con leads de presupuesto definido.</p>
+        <p className="executive-text">
+          CRM local actualizado: {prospects.length} prospectos activos y {pendingFollowups} seguimientos pendientes.
+          El foco operativo del día es convertir interesados en visitas guiadas y cerrar primero los pendientes críticos.
+        </p>
       </SectionCard>
 
       <SectionCard title="Embudo comercial visual">
