@@ -24,7 +24,14 @@ const sellerNav: NavItem[] = [
   { key: 'documents', label: 'Documentos' },
 ];
 
-type Props = { role: Role; current: AnySection; onChange: (section: AnySection) => void };
+type Props = {
+  role: Role;
+  current: AnySection;
+  onChange: (section: AnySection) => void;
+  onLogout: () => void;
+  mobileOpen?: boolean;
+  onCloseMobile?: () => void;
+};
 
 const sellerSectionByTab: Record<CrmTab, SellerSection> = {
   prospectos: 'crm',
@@ -35,23 +42,42 @@ const sellerSectionByTab: Record<CrmTab, SellerSection> = {
 
 type SidebarProps = Props & { activeCrmTab?: CrmTab };
 
-function Sidebar({ role, current, onChange, activeCrmTab = 'prospectos' }: SidebarProps) {
+function Sidebar({ role, current, onChange, onLogout, activeCrmTab = 'prospectos', mobileOpen = false, onCloseMobile }: SidebarProps) {
   const nav = role === 'owner' ? ownerNav : sellerNav;
   const sellerCurrent = current === 'documents' ? 'documents' : sellerSectionByTab[activeCrmTab];
+
+  const handleSectionClick = (section: AnySection) => {
+    onChange(section);
+    onCloseMobile?.();
+  };
+
+  const handleLogout = () => {
+    onCloseMobile?.();
+    onLogout();
+  };
+
   return (
-    <aside className="sidebar">
-      <div className="brand-stack">
-        <img src="/brand/adein.png" alt="ADEIN" className="logo-mini" />
-        <p>Panel comercial inmobiliario</p>
-      </div>
-      <nav>
-        {nav.map((item) => (
-          <button key={item.key} onClick={() => onChange(item.key)} className={(role === 'seller' ? sellerCurrent : current) === item.key ? 'active' : ''}>
-            {item.label}
-          </button>
-        ))}
-      </nav>
-    </aside>
+    <>
+      <button className={`sidebar-overlay ${mobileOpen ? 'open' : ''}`} onClick={onCloseMobile} aria-label="Cerrar menú" />
+      <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}>
+        <div className="sidebar-mobile-top">
+          <img src="/brand/adein.png" alt="ADEIN" className="logo-mini" />
+          <button className="btn-outline sidebar-close" onClick={onCloseMobile}>Cerrar</button>
+        </div>
+        <div className="brand-stack">
+          <img src="/brand/adein.png" alt="ADEIN" className="logo-mini" />
+          <p>Panel comercial inmobiliario</p>
+        </div>
+        <nav>
+          {nav.map((item) => (
+            <button key={item.key} onClick={() => handleSectionClick(item.key)} className={(role === 'seller' ? sellerCurrent : current) === item.key ? 'active' : ''}>
+              {item.label}
+            </button>
+          ))}
+          <button className="sidebar-logout" onClick={handleLogout}>Cerrar sesión</button>
+        </nav>
+      </aside>
+    </>
   );
 }
 

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Role } from './LoginView';
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -34,6 +34,17 @@ function Shell({ session, defaultSection, onLogout }: Props) {
   const initialCrmTab = defaultSection in crmTabBySection ? crmTabBySection[defaultSection as keyof typeof crmTabBySection] : 'prospectos';
   const [activeSection, setActiveSection] = useState<OwnerSection | SellerSection>(defaultSection);
   const [activeCrmTab, setActiveCrmTab] = useState<CrmTab>(initialCrmTab);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const closeOnDesktop = () => {
+      if (window.innerWidth > 1024) setMobileMenuOpen(false);
+    };
+
+    closeOnDesktop();
+    window.addEventListener('resize', closeOnDesktop);
+    return () => window.removeEventListener('resize', closeOnDesktop);
+  }, []);
 
   const section = isSeller && activeSection !== 'documents' ? sectionByCrmTab[activeCrmTab] : activeSection;
 
@@ -80,9 +91,24 @@ function Shell({ session, defaultSection, onLogout }: Props) {
   return (
     <main className="app-shell">
       <AdeinAnimatedBackground variant="panel" />
-      <Sidebar role={session.role} current={activeSection} activeCrmTab={activeCrmTab} onChange={handleSectionChange} />
+      <Sidebar
+        role={session.role}
+        current={activeSection}
+        activeCrmTab={activeCrmTab}
+        onChange={handleSectionChange}
+        onLogout={onLogout}
+        mobileOpen={mobileMenuOpen}
+        onCloseMobile={() => setMobileMenuOpen(false)}
+      />
       <section className="main-panel">
-        <Header role={session.role} title={title} subtitle={subtitle} username={session.username} onLogout={onLogout} />
+        <Header
+          role={session.role}
+          title={title}
+          subtitle={subtitle}
+          username={session.username}
+          onLogout={onLogout}
+          onMenuToggle={() => setMobileMenuOpen((prev) => !prev)}
+        />
         {renderPage()}
       </section>
     </main>
