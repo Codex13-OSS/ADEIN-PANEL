@@ -1,4 +1,5 @@
 import { FormEvent, useState } from 'react';
+import AdeinAnimatedBackground from './AdeinAnimatedBackground';
 
 export type Role = 'owner' | 'seller';
 
@@ -18,7 +19,8 @@ function LoginView({ onLogin }: Props) {
   };
 
   return (
-    <main className="login-screen technical-bg">
+    <main className="login-screen">
+      <AdeinAnimatedBackground variant="login" />
       <section className="login-card">
         <img src="/brand/adein.png" alt="ADEIN" className="brand-main" />
         <p className="brand-subtitle">Administradora e Inmobiliaria</p>
