@@ -2,26 +2,6 @@ type Props = {
   variant?: 'login' | 'panel';
 };
 
-const measurementLinesX = ['18%', '42%', '66%', '84%'];
-const measurementLinesY = ['14%', '38%', '62%', '86%'];
-const lotShapes = [
-  { top: '20%', left: '12%', width: '18%', height: '12%', rotate: '-4deg' },
-  { top: '54%', left: '24%', width: '22%', height: '15%', rotate: '3deg' },
-  { top: '30%', left: '61%', width: '20%', height: '13%', rotate: '-2deg' },
-  { top: '68%', left: '70%', width: '15%', height: '11%', rotate: '5deg' },
-];
-const referencePoints = [
-  { top: '24%', left: '28%' },
-  { top: '44%', left: '58%' },
-  { top: '70%', left: '36%' },
-  { top: '62%', left: '78%' },
-];
-const locationPulses = [
-  { top: '34%', left: '18%' },
-  { top: '58%', left: '67%' },
-  { top: '78%', left: '52%' },
-];
-
 function AdeinAnimatedBackground({ variant = 'login' }: Props) {
   return (
     <div className={`crm-animated-background ${variant}-variant`} aria-hidden="true">
@@ -30,39 +10,31 @@ function AdeinAnimatedBackground({ variant = 'login' }: Props) {
           <div className="grid-major" />
           <div className="grid-minor" />
         </div>
-
         <div className="measuring-lines">
-          {measurementLinesX.map((top) => (
-            <span key={`x-${top}`} className="m-line horizontal" style={{ top }} />
-          ))}
-          {measurementLinesY.map((left) => (
-            <span key={`y-${left}`} className="m-line vertical" style={{ left }} />
-          ))}
+          <div className="m-line m-h1" />
+          <div className="m-line m-h2" />
+          <div className="m-line m-h3" />
+          <div className="m-line m-v1" />
+          <div className="m-line m-v2" />
+          <div className="m-line m-v3" />
         </div>
-
         <div className="terrain-shapes">
-          {lotShapes.map((shape) => (
-            <span
-              key={`${shape.top}-${shape.left}`}
-              className="lot"
-              style={{ top: shape.top, left: shape.left, width: shape.width, height: shape.height, transform: `rotate(${shape.rotate})` }}
-            />
-          ))}
+          <div className="lot lot-1" />
+          <div className="lot lot-2" />
+          <div className="lot lot-3" />
+          <div className="lot lot-4" />
         </div>
-
         <div className="reference-points">
-          {referencePoints.map((point) => (
-            <span key={`${point.top}-${point.left}`} className="ref-point" style={{ top: point.top, left: point.left }} />
-          ))}
+          <div className="ref-point rp-1" />
+          <div className="ref-point rp-2" />
+          <div className="ref-point rp-3" />
+          <div className="ref-point rp-4" />
+          <div className="ref-point rp-5" />
         </div>
-
         <div className="location-rings">
-          {locationPulses.map((pulse) => (
-            <span key={`${pulse.top}-${pulse.left}`} className="loc-ring" style={{ top: pulse.top, left: pulse.left }} />
-          ))}
-          {locationPulses.map((pulse) => (
-            <span key={`ring-b-${pulse.top}-${pulse.left}`} className="loc-ring ring-b" style={{ top: pulse.top, left: pulse.left }} />
-          ))}
+          <div className="loc-ring lr-1" />
+          <div className="loc-ring lr-2" />
+          <div className="loc-ring lr-3" />
         </div>
       </div>
     </div>
