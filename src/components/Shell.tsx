@@ -11,7 +11,7 @@ import DocumentsPage from '../pages/DocumentsPage';
 import SettingsPage from '../pages/SettingsPage';
 import { CrmTab } from '../pages/CrmPage';
 import AdeinAnimatedBackground from './AdeinAnimatedBackground';
-import { AnalyzedConversation, Followup, Prospect, RecommendedAction } from '../types/crm';
+import { AnalyzedConversation, CrmHistoryEvent, Followup, Prospect, RecommendedAction } from '../types/crm';
 import { clearCrmStorage, loadCrmStorage, saveCrmStorage } from '../lib/crmStorage';
 
 export type OwnerSection = 'dashboard' | 'crm' | 'business' | 'campaigns' | 'sellers' | 'documents' | 'settings';
@@ -23,6 +23,7 @@ const sectionByCrmTab: Record<CrmTab, SellerSection> = {
   whatsapp: 'analyze',
   seguimientos: 'followups',
   acciones: 'performance',
+  historial: 'crm',
 };
 
 const MOCK_ANALYSIS: AnalyzedConversation = {
@@ -53,9 +54,10 @@ function Shell({ session, defaultSection, onLogout }: Props) {
   const initialCrmTab = defaultSection in crmTabBySection ? crmTabBySection[defaultSection as keyof typeof crmTabBySection] : 'prospectos';
   const [activeSection, setActiveSection] = useState<OwnerSection | SellerSection>(defaultSection);
   const [activeCrmTab, setActiveCrmTab] = useState<CrmTab>(initialCrmTab);
-  const [crmState] = useState(() => loadCrmStorage({ prospects: INITIAL_PROSPECTS, followups: INITIAL_FOLLOWUPS }));
+  const [crmState] = useState(() => loadCrmStorage({ prospects: INITIAL_PROSPECTS, followups: INITIAL_FOLLOWUPS, historyEvents: [] }));
   const [prospects, setProspects] = useState<Prospect[]>(crmState.prospects);
   const [followups, setFollowups] = useState<Followup[]>(crmState.followups);
+  const [historyEvents, setHistoryEvents] = useState<CrmHistoryEvent[]>(crmState.historyEvents);
 
   const recommendedActions = useMemo<RecommendedAction[]>(() => {
     const pendingFollowups = followups.filter((item) => !item.completed);
@@ -69,9 +71,18 @@ function Shell({ session, defaultSection, onLogout }: Props) {
 
 
   useEffect(() => {
-    saveCrmStorage({ prospects, followups });
-  }, [prospects, followups]);
+    saveCrmStorage({ prospects, followups, historyEvents });
+  }, [prospects, followups, historyEvents]);
 
+
+
+  const appendHistoryEvent = (event: Omit<CrmHistoryEvent, 'id' | 'createdAt'>) => {
+    setHistoryEvents((previous) => [{
+      id: `history-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      createdAt: new Date().toISOString(),
+      ...event,
+    }, ...previous]);
+  };
   const section = isSeller && activeSection !== 'documents' ? sectionByCrmTab[activeCrmTab] : activeSection;
 
   const isGenericPhone = (phone: string) => {
@@ -96,6 +107,17 @@ function Shell({ session, defaultSection, onLogout }: Props) {
       nextAction: analysis.nextAction,
       intentionLevel: analysis.interestLevel === 'Alto' ? 'Alta' : analysis.interestLevel === 'Medio' ? 'Media' : 'Baja',
     }]);
+
+    appendHistoryEvent({
+      type: 'prospect_created',
+      title: 'Prospecto creado',
+      description: `Se agregó a ${analysis.name} al CRM desde análisis de WhatsApp.`,
+      prospectName: analysis.name,
+      prospectPhone: analysis.phone,
+      property: analysis.property,
+      source: 'whatsapp_txt',
+    });
+
     return 'created';
   };
 
@@ -112,11 +134,32 @@ function Shell({ session, defaultSection, onLogout }: Props) {
       state: 'Pendiente de hoy',
       completed: false,
     }, ...previous]);
+
+    appendHistoryEvent({
+      type: 'followup_created',
+      title: 'Seguimiento creado',
+      description: `Se programó seguimiento para ${analysis.name}.`,
+      prospectName: analysis.name,
+      prospectPhone: analysis.phone,
+      property: analysis.property,
+      source: 'whatsapp_txt',
+    });
+
     return 'created';
   };
 
   const handleCompleteFollowup = (id: string) => {
+    const followup = followups.find((item) => item.id === id);
+    if (!followup || followup.completed) return;
+
     setFollowups((previous) => previous.map((item) => item.id === id ? { ...item, completed: true } : item));
+    appendHistoryEvent({
+      type: 'followup_completed',
+      title: 'Seguimiento completado',
+      description: `Se marcó como realizado el seguimiento de ${followup.prospectName}.`,
+      prospectName: followup.prospectName,
+      source: 'manual',
+    });
   };
 
   const handleResetCrmDemo = () => {
@@ -124,6 +167,7 @@ function Shell({ session, defaultSection, onLogout }: Props) {
     clearCrmStorage();
     setProspects(INITIAL_PROSPECTS);
     setFollowups(INITIAL_FOLLOWUPS);
+    setHistoryEvents([]);
   };
 
   const handleSectionChange = (nextSection: OwnerSection | SellerSection) => {
@@ -158,7 +202,7 @@ function Shell({ session, defaultSection, onLogout }: Props) {
 
   const renderPage = () => {
     if (section === 'dashboard') return <OwnerDashboardPage prospects={prospects} followups={followups} recommendedActions={recommendedActions} />;
-    if (section === 'crm' || section === 'analyze' || section === 'followups' || section === 'performance') return <CrmPage role={session.role} activeTab={activeCrmTab} onTabChange={setActiveCrmTab} prospects={prospects} followups={followups} recommendedActions={recommendedActions} analyzedConversation={MOCK_ANALYSIS} onSaveProspect={handleSaveProspect} onCreateFollowup={handleCreateFollowup} onCompleteFollowup={handleCompleteFollowup} onResetCrmDemo={handleResetCrmDemo} />;
+    if (section === 'crm' || section === 'analyze' || section === 'followups' || section === 'performance') return <CrmPage role={session.role} activeTab={activeCrmTab} onTabChange={setActiveCrmTab} prospects={prospects} followups={followups} historyEvents={historyEvents} recommendedActions={recommendedActions} analyzedConversation={MOCK_ANALYSIS} onSaveProspect={handleSaveProspect} onCreateFollowup={handleCreateFollowup} onCompleteFollowup={handleCompleteFollowup} onResetCrmDemo={handleResetCrmDemo} />;
     if (section === 'business') return <CurrentBusinessPage />;
     if (section === 'campaigns') return <CampaignsPage />;
     if (section === 'sellers') return <SellersPage />;

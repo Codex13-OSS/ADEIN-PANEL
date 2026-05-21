@@ -31,6 +31,7 @@ const sellerSectionByTab: Record<CrmTab, SellerSection> = {
   whatsapp: 'analyze',
   seguimientos: 'followups',
   acciones: 'performance',
+  historial: 'crm',
 };
 
 type SidebarProps = Props & { activeCrmTab?: CrmTab };

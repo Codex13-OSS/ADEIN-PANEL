@@ -1,9 +1,9 @@
 import { ChangeEvent, useMemo, useState } from 'react';
 import { parseWhatsAppConversation } from '../lib/whatsappParser';
 import SectionCard from '../components/SectionCard';
-import { AnalyzedConversation, Followup, Prospect, RecommendedAction } from '../types/crm';
+import { AnalyzedConversation, CrmHistoryEvent, Followup, Prospect, RecommendedAction } from '../types/crm';
 
-export type CrmTab = 'prospectos' | 'whatsapp' | 'seguimientos' | 'acciones';
+export type CrmTab = 'prospectos' | 'whatsapp' | 'seguimientos' | 'acciones' | 'historial';
 
 type Props = {
   activeTab?: CrmTab;
@@ -12,6 +12,7 @@ type Props = {
   prospects: Prospect[];
   followups: Followup[];
   recommendedActions: RecommendedAction[];
+  historyEvents: CrmHistoryEvent[];
   analyzedConversation: AnalyzedConversation;
   onSaveProspect: (analysis: AnalyzedConversation) => 'created' | 'duplicate';
   onCreateFollowup: (analysis: AnalyzedConversation) => 'created' | 'duplicate';
@@ -24,9 +25,10 @@ const TAB_OPTIONS: { key: CrmTab; label: string }[] = [
   { key: 'whatsapp', label: 'Analizar WhatsApp' },
   { key: 'seguimientos', label: 'Seguimientos' },
   { key: 'acciones', label: 'Acciones recomendadas' },
+  { key: 'historial', label: 'Historial' },
 ];
 
-function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, followups, recommendedActions, analyzedConversation, onSaveProspect, onCreateFollowup, onCompleteFollowup, onResetCrmDemo }: Props) {
+function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, followups, recommendedActions, historyEvents, analyzedConversation, onSaveProspect, onCreateFollowup, onCompleteFollowup, onResetCrmDemo }: Props) {
   const [internalTab, setInternalTab] = useState<CrmTab>(activeTab);
   const [fileName, setFileName] = useState('');
   const [filePreview, setFilePreview] = useState('');
@@ -185,12 +187,35 @@ function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, follo
       );
     }
 
+
+    if (currentTab === 'historial') {
+      return (
+        <SectionCard title="Historial CRM" subtitle="Eventos recientes del flujo comercial local">
+          {historyEvents.length === 0 ? <p className="file-state">Sin eventos todavía.</p> : (
+            <div className="analysis-grid">
+              {historyEvents.map((event) => (
+                <article className="analysis-item" key={event.id}>
+                  <h4>{event.title}</h4>
+                  <p><strong>Fecha:</strong> {new Date(event.createdAt).toLocaleString('es-MX')}</p>
+                  <p>{event.description}</p>
+                  {event.prospectName ? <p><strong>Prospecto:</strong> {event.prospectName}</p> : null}
+                  {event.prospectPhone ? <p><strong>Teléfono:</strong> {event.prospectPhone}</p> : null}
+                  {event.property ? <p><strong>Predio:</strong> {event.property}</p> : null}
+                  <p><strong>Origen:</strong> {event.source}</p>
+                </article>
+              ))}
+            </div>
+          )}
+        </SectionCard>
+      );
+    }
+
     if (currentTab === 'seguimientos') {
       return <SectionCard title="Seguimientos comerciales" subtitle="Prioriza acciones de hoy para no perder cierres"><div className="analysis-grid">{followups.filter((item) => !item.completed).map((item) => <article className="analysis-item" key={item.id}><h4>{item.state}</h4><p><strong>Prospecto:</strong> {item.prospectName}</p><p><strong>Acción sugerida:</strong> {item.action}</p><p><strong>Hora sugerida:</strong> {item.suggestedTime}</p><p><strong>Prioridad:</strong> {item.priority}</p><button className="btn-outline" onClick={() => onCompleteFollowup(item.id)}>Marcar como realizado</button></article>)}</div></SectionCard>;
     }
 
     return <SectionCard title="Acciones recomendadas" subtitle="Motor visual de enfoque comercial diario"><div className="analysis-grid">{recommendedActions.map((item) => <article className="analysis-item" key={item.id}><h4>{item.title}</h4><p><strong>Prioridad:</strong> {item.priority}</p><p><strong>Motivo:</strong> {item.reason}</p><p><strong>Acción sugerida:</strong> {item.suggestedAction}</p><button className="btn-outline">Ejecutar acción mock</button></article>)}</div></SectionCard>;
-  }, [currentTab, fileName, filePreview, prospects, currentAnalysis, reviewAnalysis, saveFeedback, followupFeedback, copyFeedback, followups, onCompleteFollowup, recommendedActions, onCreateFollowup, onSaveProspect, pastedText, analysisFeedback, lastAnalysisLabel, fileText]);
+  }, [currentTab, fileName, filePreview, prospects, currentAnalysis, reviewAnalysis, saveFeedback, followupFeedback, copyFeedback, followups, onCompleteFollowup, recommendedActions, onCreateFollowup, onSaveProspect, pastedText, analysisFeedback, lastAnalysisLabel, fileText, historyEvents]);
 
   return (
     <div className="page-grid">
