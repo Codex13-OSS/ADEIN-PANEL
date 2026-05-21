@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import SectionCard from '../components/SectionCard';
 import { IMPORT_DEMO_SAMPLE } from '../data/importDemoSample';
 import { buildImportBatch } from '../lib/importNormalizer';
@@ -11,13 +11,40 @@ import {
   updateImportBatchStatus,
 } from '../lib/importStorage';
 import { ImportBatch } from '../types/importer';
+import { ImportSelfCheckResult, runImportSelfCheck } from '../lib/importSelfCheck';
 
 export default function SettingsPage() {
   const [input, setInput] = useState('');
   const [localBatches, setLocalBatches] = useState<ImportBatch[]>(() => listImportBatches());
   const [previewBatch, setPreviewBatch] = useState<ImportBatch | null>(null);
+  const [selfCheckResult, setSelfCheckResult] = useState<ImportSelfCheckResult | null>(null);
 
-  const storeSummary = useMemo(() => summarizeImportStore(), [localBatches]);
+  const [summaryReadError, setSummaryReadError] = useState<string | null>(null);
+
+  const storeSummary = useMemo(() => {
+    try {
+      return summarizeImportStore();
+    } catch {
+      return {
+        total_batches: 0,
+        total_rows: 0,
+        review_required_rows: 0,
+        duplicate_candidate_rows: 0,
+        latest_batch: null,
+        audit_log: [],
+      };
+    }
+  }, [localBatches]);
+
+  useEffect(() => {
+    try {
+      summarizeImportStore();
+      setSummaryReadError(null);
+    } catch {
+      setSummaryReadError('No se pudo leer el staging local. Puedes limpiar importaciones locales.');
+    }
+  }, [localBatches]);
+
   const latestBatch = storeSummary.latest_batch;
 
   const handleImport = (source: ImportBatch['source']) => {
@@ -45,6 +72,12 @@ export default function SettingsPage() {
     setLocalBatches(store.batches);
   };
 
+  const handleRunSelfCheck = () => {
+    const result = runImportSelfCheck();
+    setSelfCheckResult(result);
+    setLocalBatches(listImportBatches());
+  };
+
   const handleClearImports = () => {
     const store = clearImportStore();
     appendImportAuditEvent('import_store_cleared', 'Acción manual desde Configuración: limpiar importaciones locales.');
@@ -54,6 +87,14 @@ export default function SettingsPage() {
 
   return (
     <div className="page-grid">
+
+      {summaryReadError && (
+        <SectionCard title="Staging local">
+          <p className="muted">{summaryReadError}</p>
+          <button type="button" onClick={handleClearImports}>Limpiar importaciones locales</button>
+        </SectionCard>
+      )}
+
       <SectionCard title="Importador controlado CSV/TXT (local)">
         <p className="muted">Pega CSV/TSV con encabezados históricos para staging local. Se conserva raw_payload y se genera normalized_payload.</p>
         <textarea
@@ -72,6 +113,29 @@ export default function SettingsPage() {
           <button type="button" onClick={() => handleStatusChange('rejected')}>Rechazar último batch</button>
           <button type="button" onClick={handleClearImports}>Limpiar importaciones locales</button>
         </div>
+      </SectionCard>
+
+
+
+      <SectionCard title="Prueba automática del importador">
+        <p className="muted">No modifica CRM; restaura importaciones al finalizar.</p>
+        <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+          <button type="button" onClick={handleRunSelfCheck}>Ejecutar prueba automática del importador</button>
+        </div>
+        {selfCheckResult && (
+          <div style={{ marginTop: 12 }}>
+            <p className="muted"><strong>Resultado general:</strong> {selfCheckResult.ok ? 'OK' : 'Falló'}</p>
+            <p className="muted"><strong>Última ejecución:</strong> {new Date(selfCheckResult.finished_at).toLocaleString()}</p>
+            <p className="muted">{selfCheckResult.summary}</p>
+            <ul style={{ marginTop: 10, paddingLeft: 18 }}>
+              {selfCheckResult.checks.map((check) => (
+                <li key={check.id} style={{ marginBottom: 4 }}>
+                  {check.status === 'pass' ? '✅' : '❌'} <strong>{check.label}</strong>: {check.message}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </SectionCard>
 
       <SectionCard title="Staging local: resumen">

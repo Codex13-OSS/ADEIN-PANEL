@@ -3,6 +3,7 @@ import {
   ImportAuditEventType,
   ImportBatch,
   ImportBatchStatus,
+  ImportRawRow,
   ImportStore,
   IMPORT_STORAGE_KEY,
 } from '../types/importer';
@@ -26,16 +27,82 @@ const buildAuditEvent = (
 
 const isObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
 
+const sanitizeRow = (row: unknown, index: number): ImportRawRow => {
+  const raw = isObject(row) ? row : {};
+  const warnings = Array.isArray(raw.warnings) ? raw.warnings : [];
+  const reviewRequired = typeof raw.review_required === 'boolean' ? raw.review_required : warnings.length > 0;
+  const duplicateCandidate = Boolean(raw.duplicate_candidate);
+
+  return {
+    id: typeof raw.id === 'string' && raw.id ? raw.id : buildId('row'),
+    source_row: typeof raw.source_row === 'number' ? raw.source_row : index + 2,
+    raw_payload: isObject(raw.raw_payload) ? (raw.raw_payload as Record<string, string>) : {},
+    raw_headers: Array.isArray(raw.raw_headers) ? raw.raw_headers.filter((item): item is string => typeof item === 'string') : [],
+    normalized_payload: isObject(raw.normalized_payload) ? (raw.normalized_payload as ImportRawRow['normalized_payload']) : ({} as ImportRawRow['normalized_payload']),
+    warnings: warnings as ImportRawRow['warnings'],
+    review_required: reviewRequired,
+    duplicate_candidate: duplicateCandidate,
+    status: raw.status === 'needs_review' || raw.status === 'reviewed' || raw.status === 'rejected' || raw.status === 'staged'
+      ? raw.status
+      : (reviewRequired ? 'needs_review' : 'staged'),
+  };
+};
+
+const summarizeRows = (rows: ImportRawRow[]) => ({
+  total_rows: rows.length,
+  review_required_rows: rows.filter((row) => row.review_required).length,
+  duplicate_candidate_rows: rows.filter((row) => row.duplicate_candidate).length,
+  warning_count: rows.reduce((sum, row) => sum + (Array.isArray(row.warnings) ? row.warnings.length : 0), 0),
+});
+
+const sanitizeBatch = (batch: unknown): ImportBatch => {
+  const raw = isObject(batch) ? batch : {};
+  const rows = (Array.isArray(raw.rows) ? raw.rows : []).map((row, index) => sanitizeRow(row, index));
+
+  const computedSummary = summarizeRows(rows);
+  const rawSummary = isObject(raw.summary) ? raw.summary : {};
+  const summary = {
+    total_rows: typeof rawSummary.total_rows === 'number' ? rawSummary.total_rows : computedSummary.total_rows,
+    review_required_rows: typeof rawSummary.review_required_rows === 'number' ? rawSummary.review_required_rows : computedSummary.review_required_rows,
+    duplicate_candidate_rows: typeof rawSummary.duplicate_candidate_rows === 'number' ? rawSummary.duplicate_candidate_rows : computedSummary.duplicate_candidate_rows,
+    warning_count: typeof rawSummary.warning_count === 'number' ? rawSummary.warning_count : computedSummary.warning_count,
+  };
+
+  const fallbackStatus: ImportBatchStatus = rows.some((row) => row.review_required) ? 'needs_review' : 'staged';
+  const status: ImportBatchStatus = raw.status === 'staged' || raw.status === 'needs_review' || raw.status === 'reviewed' || raw.status === 'approved_for_migration' || raw.status === 'rejected'
+    ? raw.status
+    : fallbackStatus;
+
+  return {
+    id: typeof raw.id === 'string' && raw.id ? raw.id : buildId('batch'),
+    source: raw.source === 'demo_sample' ? 'demo_sample' : 'manual_csv_tsv',
+    source_file: typeof raw.source_file === 'string' ? raw.source_file : 'legacy_import.csv',
+    source_sheet: typeof raw.source_sheet === 'string' ? raw.source_sheet : 'staging',
+    created_at: typeof raw.created_at === 'string' ? raw.created_at : nowIso(),
+    updated_at: typeof raw.updated_at === 'string' ? raw.updated_at : nowIso(),
+    status,
+    rows,
+    summary,
+    audit_log: Array.isArray(raw.audit_log) ? (raw.audit_log as ImportAuditEvent[]) : [],
+  };
+};
+
 const migrateLegacyStore = (parsed: unknown): ImportStore => {
   if (Array.isArray(parsed)) {
-    return { ...EMPTY_STORE, batches: parsed as ImportBatch[] };
+    return {
+      ...EMPTY_STORE,
+      batches: parsed.map((batch) => sanitizeBatch(batch)),
+    };
   }
 
-  if (isObject(parsed) && Array.isArray(parsed.batches) && Array.isArray(parsed.audit_log)) {
+  if (isObject(parsed)) {
+    const rawBatches = Array.isArray(parsed.batches) ? parsed.batches : [];
+    const rawAuditLog = Array.isArray(parsed.audit_log) ? parsed.audit_log : [];
+
     return {
       version: Number(parsed.version) || 1,
-      batches: parsed.batches as ImportBatch[],
-      audit_log: parsed.audit_log as ImportAuditEvent[],
+      batches: rawBatches.map((batch) => sanitizeBatch(batch)),
+      audit_log: rawAuditLog as ImportAuditEvent[],
     };
   }
 
@@ -72,14 +139,15 @@ export const appendImportAuditEvent = (
 };
 
 export const saveImportBatch = (batch: ImportBatch) => {
+  const safeBatch = sanitizeBatch(batch);
   const store = getImportStore();
-  const auditEvent = buildAuditEvent('batch_created', `Lote ${batch.id} guardado localmente.`, {
-    batch_id: batch.id,
-    rows: batch.summary.total_rows,
+  const auditEvent = buildAuditEvent('batch_created', `Lote ${safeBatch.id} guardado localmente.`, {
+    batch_id: safeBatch.id,
+    rows: safeBatch.summary.total_rows,
   });
 
-  batch.audit_log = [auditEvent, ...(batch.audit_log ?? [])];
-  store.batches = [batch, ...store.batches];
+  safeBatch.audit_log = [auditEvent, ...(safeBatch.audit_log ?? [])];
+  store.batches = [safeBatch, ...store.batches];
   store.audit_log = [auditEvent, ...store.audit_log].slice(0, 200);
   saveImportStore(store);
   return store;
@@ -121,9 +189,9 @@ export const clearImportStore = () => {
 
 export const summarizeImportStore = () => {
   const store = getImportStore();
-  const total_rows = store.batches.reduce((sum, batch) => sum + batch.summary.total_rows, 0);
-  const review_required_rows = store.batches.reduce((sum, batch) => sum + batch.summary.review_required_rows, 0);
-  const duplicate_candidate_rows = store.batches.reduce((sum, batch) => sum + batch.summary.duplicate_candidate_rows, 0);
+  const total_rows = store.batches.reduce((sum, batch) => sum + (batch.summary?.total_rows ?? summarizeRows(batch.rows ?? []).total_rows), 0);
+  const review_required_rows = store.batches.reduce((sum, batch) => sum + (batch.summary?.review_required_rows ?? summarizeRows(batch.rows ?? []).review_required_rows), 0);
+  const duplicate_candidate_rows = store.batches.reduce((sum, batch) => sum + (batch.summary?.duplicate_candidate_rows ?? summarizeRows(batch.rows ?? []).duplicate_candidate_rows), 0);
   const latest_batch = store.batches[0] ?? null;
 
   return {
@@ -132,6 +200,6 @@ export const summarizeImportStore = () => {
     review_required_rows,
     duplicate_candidate_rows,
     latest_batch,
-    audit_log: store.audit_log,
+    audit_log: Array.isArray(store.audit_log) ? store.audit_log : [],
   };
 };
