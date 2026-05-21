@@ -16,3 +16,6 @@ Esta carpeta contiene la preparación **versionada** del schema SQL inicial para
 
 ## Contexto operativo
 En infraestructura existe una base vacía `adein_crm` (servidor externo), pero este repositorio solo almacena el schema versionado y documentación para ejecución controlada en fases posteriores.
+
+## Registro operativo v024
+- Ver `server-apply-v024.md` para el acta sanitizada de aplicación manual/controlada del schema v023 en servidor (sin app conectada, sin seed demo y sin datos reales).
