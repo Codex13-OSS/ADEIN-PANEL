@@ -14,6 +14,7 @@ import { CrmTab } from '../pages/CrmPage';
 import AdeinAnimatedBackground from './AdeinAnimatedBackground';
 import { AnalyzedConversation, CrmHistoryEvent, Followup, Prospect, RecommendedAction } from '../types/crm';
 import { clearCrmStorage, loadCrmStorage, saveCrmStorage } from '../lib/crmStorage';
+import { DbSnapshotProvider } from '../context/DbSnapshotContext';
 
 export type OwnerSection = 'dashboard' | 'crm' | 'business' | 'campaigns' | 'sellers' | 'documents' | 'settings';
 export type SellerSection = 'crm' | 'analyze' | 'followups' | 'performance' | 'documents';
@@ -219,7 +220,7 @@ function Shell({ session, defaultSection, onLogout }: Props) {
       <Sidebar role={session.role} current={activeSection} activeCrmTab={activeCrmTab} onChange={handleSectionChange} />
       <section className="main-panel">
         <Header role={session.role} title={title} subtitle={subtitle} username={session.username} onLogout={onLogout} />
-        {renderPage()}
+        <DbSnapshotProvider>{renderPage()}</DbSnapshotProvider>
       </section>
     </main>
   );

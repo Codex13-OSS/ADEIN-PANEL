@@ -2,6 +2,7 @@ import DecisionCard from '../components/DecisionCard';
 import SectionCard from '../components/SectionCard';
 import StatCard from '../components/StatCard';
 import { Followup, Prospect, RecommendedAction } from '../types/crm';
+import { useDbSnapshot } from '../context/DbSnapshotContext';
 
 type Props = {
   prospects: Prospect[];
@@ -13,6 +14,7 @@ type Props = {
 function OwnerDashboardPage({ prospects, followups, recommendedActions, historicalMetrics }: Props) {
   const highIntention = prospects.filter((item) => item.intentionLevel === 'Alta').length;
   const pendingFollowups = followups.filter((item) => !item.completed).length;
+  const { appliedSnapshot } = useDbSnapshot();
 
   return (
     <div className="page-grid">
@@ -36,6 +38,32 @@ function OwnerDashboardPage({ prospects, followups, recommendedActions, historic
           <DecisionCard level="high" title="Prioridad alta" description={`${highIntention} prospectos con intención alta en CRM local.`} />
           <DecisionCard level="recommendation" title="Recomendación" description={recommendedActions[0]?.suggestedAction ?? 'Priorizar seguimiento comercial del día.'} />
         </div>
+      </SectionCard>
+
+
+      <SectionCard title="Snapshot BD read-only" subtitle="Puente controlado desde Configuración">
+        {!appliedSnapshot ? (
+          <p className="muted">Sin snapshot aplicado. Genera npm run db:snapshot y aplícalo desde Configuración.</p>
+        ) : (
+          <>
+            <p className="muted">Esta sección usa un snapshot aplicado manualmente desde Configuración. No conecta con MariaDB desde el navegador.</p>
+            <p className="muted"><strong>database:</strong> {appliedSnapshot.database}</p>
+            <p className="muted"><strong>mode:</strong> {appliedSnapshot.mode}</p>
+            <p className="muted"><strong>writesEnabled:</strong> {String(appliedSnapshot.writesEnabled)}</p>
+            <p className="muted"><strong>generatedAt:</strong> {appliedSnapshot.generatedAt}</p>
+            <ul style={{ paddingLeft: 18 }}>
+              <li>Clientes: {appliedSnapshot.summaryCards.clients.value}</li>
+              <li>Lotes: {appliedSnapshot.summaryCards.lots.value}</li>
+              <li>Contratos: {appliedSnapshot.summaryCards.contracts.value}</li>
+              <li>Cobranza esperada: {appliedSnapshot.summaryCards.expectedCollection.value} {appliedSnapshot.summaryCards.expectedCollection.currency ?? ''}</li>
+              <li>Cobranza pendiente: {appliedSnapshot.summaryCards.pendingCollection.value} {appliedSnapshot.summaryCards.pendingCollection.currency ?? ''}</li>
+            </ul>
+            <h4>Warnings</h4>
+            {appliedSnapshot.warnings.length === 0 ? <p className="muted">Sin warnings.</p> : (
+              <ul style={{ paddingLeft: 18 }}>{appliedSnapshot.warnings.map((item) => <li key={item}>⚠️ {item}</li>)}</ul>
+            )}
+          </>
+        )}
       </SectionCard>
 
       <SectionCard title="Resumen ejecutivo inteligente">

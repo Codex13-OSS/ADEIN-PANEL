@@ -20,6 +20,7 @@ import { MigrationPlan, MigrationPlanSelfCheckResult } from '../types/migrationP
 import { runMigrationPlanSelfCheck } from '../lib/migrationPlanSelfCheck';
 import { EMPTY_SNAPSHOT_EXAMPLE, validateSnapshotInput } from '../lib/dbSnapshotViewer';
 import { DbDashboardSnapshot, SnapshotValidation } from '../types/dbSnapshot';
+import { useDbSnapshot } from '../context/DbSnapshotContext';
 
 export default function SettingsPage() {
   const [input, setInput] = useState('');
@@ -35,6 +36,8 @@ export default function SettingsPage() {
 
   const [snapshotInput, setSnapshotInput] = useState('');
   const [snapshotValidation, setSnapshotValidation] = useState<SnapshotValidation | null>(null);
+  const [snapshotAppliedMessage, setSnapshotAppliedMessage] = useState<string | null>(null);
+  const { appliedSnapshot, applySnapshot, clearSnapshot } = useDbSnapshot();
 
   const handleLoadEmptySnapshot = () => {
     setSnapshotInput(JSON.stringify(EMPTY_SNAPSHOT_EXAMPLE, null, 2));
@@ -47,7 +50,19 @@ export default function SettingsPage() {
   };
 
   const handleValidateSnapshot = () => {
+    setSnapshotAppliedMessage(null);
     setSnapshotValidation(validateSnapshotInput(snapshotInput));
+  };
+
+  const handleApplySnapshot = () => {
+    if (!snapshot || !snapshotValidation?.ok) return;
+    applySnapshot(snapshot);
+    setSnapshotAppliedMessage('Snapshot aplicado al Dashboard maestro en modo read-only.');
+  };
+
+  const handleRemoveAppliedSnapshot = () => {
+    clearSnapshot();
+    setSnapshotAppliedMessage('Snapshot aplicado removido del Dashboard maestro.');
   };
 
   const snapshot: DbDashboardSnapshot | null = snapshotValidation?.snapshot ?? null;
@@ -185,6 +200,23 @@ export default function SettingsPage() {
           <button type="button" onClick={handleValidateSnapshot}>Validar snapshot</button>
         </div>
 
+
+        {snapshotValidation?.ok && snapshot && (
+          <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+            <button type="button" onClick={handleApplySnapshot}>Aplicar snapshot al dashboard</button>
+            <button type="button" onClick={handleRemoveAppliedSnapshot}>Quitar snapshot aplicado</button>
+          </div>
+        )}
+
+        {snapshotAppliedMessage && (
+          <p className="muted" style={{ marginTop: 12 }}><strong>{snapshotAppliedMessage}</strong></p>
+        )}
+
+        {appliedSnapshot && (
+          <p className="muted" style={{ marginTop: 8 }}>
+            Snapshot aplicado actual: <strong>{appliedSnapshot.generatedAt}</strong> ({appliedSnapshot.database}, {appliedSnapshot.mode}, writesEnabled={String(appliedSnapshot.writesEnabled)}).
+          </p>
+        )}
         {snapshotValidation && (
           <div style={{ marginTop: 12 }}>
             {snapshotValidation.messages.map((message) => (
