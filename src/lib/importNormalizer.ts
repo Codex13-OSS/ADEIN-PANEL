@@ -1,10 +1,21 @@
-import { ImportBatch, ImportedRecord, ImportWarning, NormalizedImportPayload, RawImportRow } from '../types/importer';
+import {
+  ImportBatch,
+  ImportBatchStatus,
+  ImportRawRow,
+  ImportSummary,
+  ImportWarning,
+  NormalizedImportPayload,
+  RawImportRow,
+} from '../types/importer';
 
 const KNOWN_HEADERS = [
   'Cliente', 'Teléfono 1', 'Teléfono 2', 'Teléfono original', 'Predio', 'LT', 'Lote', 'MZ', 'Manzana', 'Num',
   'Costo lote', 'Valor letra', 'Última letra pagada', 'Mes en curso', 'Intereses', 'Dirección', 'Observaciones',
   'Vendedor', 'Responsable seguimiento', 'Fecha de pago', 'Fecha de contrato', 'Estatus', 'Próximo seguimiento', 'Notas seguimiento',
 ] as const;
+
+const buildId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const nowIso = () => new Date().toISOString();
 
 const toNumberOrNull = (value: string) => {
   const normalized = value.replace(/[^\d.-]/g, '');
@@ -23,23 +34,25 @@ const toIsoDateOrEmpty = (value: string) => {
 
 const splitLine = (line: string, delimiter: ',' | '\t') => line.split(delimiter).map((cell) => cell.trim());
 
-export const parseRawRows = (input: string): RawImportRow[] => {
+export const parseRawRows = (input: string): { rows: RawImportRow[]; headers: string[] } => {
   const trimmed = input.trim();
-  if (!trimmed) return [];
+  if (!trimmed) return { rows: [], headers: [] };
 
   const lines = trimmed.split(/\r?\n/).filter((line) => line.trim().length > 0);
-  if (lines.length < 2) return [];
+  if (lines.length < 2) return { rows: [], headers: [] };
 
   const delimiter: ',' | '\t' = lines[0].includes('\t') ? '\t' : ',';
   const headers = splitLine(lines[0], delimiter);
 
-  return lines.slice(1).map((line) => {
+  const rows = lines.slice(1).map((line) => {
     const values = splitLine(line, delimiter);
     return headers.reduce<RawImportRow>((acc, header, index) => {
       acc[header] = values[index] ?? '';
       return acc;
     }, {});
   });
+
+  return { rows, headers };
 };
 
 const normalizeRow = (row: RawImportRow): NormalizedImportPayload => ({
@@ -78,36 +91,58 @@ const collectWarnings = (raw: RawImportRow, normalized: NormalizedImportPayload,
   return warnings;
 };
 
+const summarizeRows = (rows: ImportRawRow[]): ImportSummary => ({
+  total_rows: rows.length,
+  review_required_rows: rows.filter((row) => row.review_required).length,
+  duplicate_candidate_rows: rows.filter((row) => row.duplicate_candidate).length,
+  warning_count: rows.reduce((sum, row) => sum + row.warnings.length, 0),
+});
+
+const statusFromRows = (rows: ImportRawRow[]): ImportBatchStatus => (
+  rows.some((row) => row.review_required) ? 'needs_review' : 'staged'
+);
+
 export const buildImportBatch = (input: string, source: ImportBatch['source']): ImportBatch => {
-  const rawRows = parseRawRows(input);
+  const { rows: rawRows, headers } = parseRawRows(input);
   const seen = new Set<string>();
 
-  const records: ImportedRecord[] = rawRows.map((raw, index) => {
+  const rows: ImportRawRow[] = rawRows.map((raw, index) => {
     const normalized = normalizeRow(raw);
     const duplicateKey = `${normalized.clientName.toLowerCase()}|${(normalized.primaryPhone || normalized.originalPhone).replace(/\D/g, '')}`;
     const duplicateCandidate = duplicateKey !== '|' && seen.has(duplicateKey);
     seen.add(duplicateKey);
 
     const warnings = collectWarnings(raw, normalized, duplicateCandidate);
+    const reviewRequired = warnings.length > 0;
 
     return {
-      id: `${Date.now()}-${index + 1}`,
+      id: buildId('row'),
+      source_row: index + 2,
+      raw_headers: headers.length ? headers : [...KNOWN_HEADERS],
       raw_payload: KNOWN_HEADERS.reduce<RawImportRow>((acc, header) => {
         acc[header] = raw[header] ?? '';
         return acc;
       }, {}),
       normalized_payload: normalized,
       warnings,
-      review_required: warnings.length > 0,
+      review_required: reviewRequired,
       duplicate_candidate: duplicateCandidate,
+      status: reviewRequired ? 'needs_review' : 'staged',
     };
   });
 
+  const summary = summarizeRows(rows);
+
   return {
-    id: `batch-${Date.now()}`,
-    createdAt: new Date().toISOString(),
+    id: buildId('batch'),
     source,
-    totalRows: records.length,
-    records,
+    source_file: source === 'demo_sample' ? 'import_demo_sample.csv' : 'manual_textarea.csv',
+    source_sheet: 'staging',
+    created_at: nowIso(),
+    updated_at: nowIso(),
+    status: statusFromRows(rows),
+    rows,
+    summary,
+    audit_log: [],
   };
 };
