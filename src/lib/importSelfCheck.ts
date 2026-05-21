@@ -1,6 +1,6 @@
 import { IMPORT_DEMO_SAMPLE } from '../data/importDemoSample';
 import { buildImportBatch, parseRawRows } from './importNormalizer';
-import { clearImportStore, getImportStore, saveImportBatch, updateImportBatchStatus } from './importStorage';
+import { clearImportStore, getImportStore, saveImportBatch, summarizeImportStore, updateImportBatchStatus } from './importStorage';
 import { IMPORT_STORAGE_KEY } from '../types/importer';
 
 const CRM_STORAGE_KEY = 'adein.crm.v1';
@@ -37,6 +37,7 @@ const CHECKS = {
   status_approved: 'Se puede cambiar status a approved_for_migration',
   audit_log: 'Se registra audit_log esperado',
   cleanup_imports: 'Se puede limpiar adein.imports.v1',
+  legacy_compat: 'Compatibilidad con store legacy sin summary',
   crm_intact: 'adein.crm.v1 queda intacto',
 } as const;
 
@@ -139,6 +140,18 @@ export const runImportSelfCheck = (): ImportSelfCheckResult => {
     checks.push(hasExpectedAudit
       ? pass('audit_log', 'Audit log contiene batch_created, batch_reviewed y batch_approved_for_migration.')
       : fail('audit_log', 'Audit log incompleto para los eventos esperados.'));
+
+    const legacyStore = {
+      version: 1,
+      batches: [{ id: 'legacy-batch-1', rows: [{ review_required: true, duplicate_candidate: false }] }],
+      audit_log: [],
+    };
+    window.localStorage.setItem(IMPORT_STORAGE_KEY, JSON.stringify(legacyStore));
+    const legacySummary = summarizeImportStore();
+    const legacySafe = legacySummary.total_batches >= 1 && legacySummary.total_rows >= 1 && legacySummary.review_required_rows >= 1;
+    checks.push(legacySafe
+      ? pass('legacy_compat', 'Store legacy sin summary se normaliza sin errores.')
+      : fail('legacy_compat', 'La lectura segura no reconstruyó summary para store legacy.'));
 
     clearImportStore();
     const cleared = getImportStore();

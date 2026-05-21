@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import SectionCard from '../components/SectionCard';
 import { IMPORT_DEMO_SAMPLE } from '../data/importDemoSample';
 import { buildImportBatch } from '../lib/importNormalizer';
@@ -19,7 +19,32 @@ export default function SettingsPage() {
   const [previewBatch, setPreviewBatch] = useState<ImportBatch | null>(null);
   const [selfCheckResult, setSelfCheckResult] = useState<ImportSelfCheckResult | null>(null);
 
-  const storeSummary = useMemo(() => summarizeImportStore(), [localBatches]);
+  const [summaryReadError, setSummaryReadError] = useState<string | null>(null);
+
+  const storeSummary = useMemo(() => {
+    try {
+      return summarizeImportStore();
+    } catch {
+      return {
+        total_batches: 0,
+        total_rows: 0,
+        review_required_rows: 0,
+        duplicate_candidate_rows: 0,
+        latest_batch: null,
+        audit_log: [],
+      };
+    }
+  }, [localBatches]);
+
+  useEffect(() => {
+    try {
+      summarizeImportStore();
+      setSummaryReadError(null);
+    } catch {
+      setSummaryReadError('No se pudo leer el staging local. Puedes limpiar importaciones locales.');
+    }
+  }, [localBatches]);
+
   const latestBatch = storeSummary.latest_batch;
 
   const handleImport = (source: ImportBatch['source']) => {
@@ -62,6 +87,14 @@ export default function SettingsPage() {
 
   return (
     <div className="page-grid">
+
+      {summaryReadError && (
+        <SectionCard title="Staging local">
+          <p className="muted">{summaryReadError}</p>
+          <button type="button" onClick={handleClearImports}>Limpiar importaciones locales</button>
+        </SectionCard>
+      )}
+
       <SectionCard title="Importador controlado CSV/TXT (local)">
         <p className="muted">Pega CSV/TSV con encabezados históricos para staging local. Se conserva raw_payload y se genera normalized_payload.</p>
         <textarea
