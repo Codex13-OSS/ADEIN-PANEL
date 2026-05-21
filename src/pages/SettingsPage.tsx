@@ -18,6 +18,8 @@ import { MigrationPreview, MigrationPreviewSelfCheckResult } from '../types/migr
 import { clearMigrationPlans, createMigrationPlanFromPreview, listMigrationPlans, updateMigrationPlanStatus } from '../lib/migrationPlan';
 import { MigrationPlan, MigrationPlanSelfCheckResult } from '../types/migrationPlan';
 import { runMigrationPlanSelfCheck } from '../lib/migrationPlanSelfCheck';
+import { EMPTY_SNAPSHOT_EXAMPLE, validateSnapshotInput } from '../lib/dbSnapshotViewer';
+import { DbDashboardSnapshot, SnapshotValidation } from '../types/dbSnapshot';
 
 export default function SettingsPage() {
   const [input, setInput] = useState('');
@@ -30,6 +32,26 @@ export default function SettingsPage() {
   const [migrationPlanSelfCheckResult, setMigrationPlanSelfCheckResult] = useState<MigrationPlanSelfCheckResult | null>(null);
 
   const [summaryReadError, setSummaryReadError] = useState<string | null>(null);
+
+  const [snapshotInput, setSnapshotInput] = useState('');
+  const [snapshotValidation, setSnapshotValidation] = useState<SnapshotValidation | null>(null);
+
+  const handleLoadEmptySnapshot = () => {
+    setSnapshotInput(JSON.stringify(EMPTY_SNAPSHOT_EXAMPLE, null, 2));
+    setSnapshotValidation(null);
+  };
+
+  const handleClearSnapshot = () => {
+    setSnapshotInput('');
+    setSnapshotValidation(null);
+  };
+
+  const handleValidateSnapshot = () => {
+    setSnapshotValidation(validateSnapshotInput(snapshotInput));
+  };
+
+  const snapshot: DbDashboardSnapshot | null = snapshotValidation?.snapshot ?? null;
+
 
   const storeSummary = useMemo(() => {
     try {
@@ -146,6 +168,69 @@ export default function SettingsPage() {
           <button type="button" onClick={handleClearImports}>Limpiar importaciones locales</button>
         </SectionCard>
       )}
+
+
+      <SectionCard title="Snapshot read-only de BD">
+        <p className="muted">Esta vista solo interpreta un JSON generado por npm run db:snapshot. No conecta el navegador a MariaDB y no escribe datos.</p>
+        <textarea
+          value={snapshotInput}
+          onChange={(event) => setSnapshotInput(event.target.value)}
+          placeholder="Pega aquí el JSON de npm run db:snapshot"
+          rows={10}
+          style={{ width: '100%', marginTop: 12, padding: 10 }}
+        />
+        <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+          <button type="button" onClick={handleLoadEmptySnapshot}>Cargar ejemplo vacío</button>
+          <button type="button" onClick={handleClearSnapshot}>Limpiar</button>
+          <button type="button" onClick={handleValidateSnapshot}>Validar snapshot</button>
+        </div>
+
+        {snapshotValidation && (
+          <div style={{ marginTop: 12 }}>
+            {snapshotValidation.messages.map((message) => (
+              <p key={message} className="muted"><strong>Estado:</strong> {message}</p>
+            ))}
+            {snapshotValidation.warnings.map((warning) => (
+              <p key={warning} className="muted">⚠️ {warning}</p>
+            ))}
+          </div>
+        )}
+
+        {snapshot && (
+          <div style={{ marginTop: 12 }}>
+            <p className="muted"><strong>database:</strong> {snapshot.database}</p>
+            <p className="muted"><strong>mode:</strong> {snapshot.mode}</p>
+            <p className="muted"><strong>writesEnabled:</strong> {String(snapshot.writesEnabled)}</p>
+            <p className="muted"><strong>generatedAt:</strong> {snapshot.generatedAt}</p>
+
+            <h4>Summary cards</h4>
+            <ul style={{ paddingLeft: 18 }}>
+              <li>Clientes: {snapshot.summaryCards.clients.value} ({snapshot.summaryCards.clients.status ?? 'n/a'})</li>
+              <li>Lotes: {snapshot.summaryCards.lots.value} ({snapshot.summaryCards.lots.status ?? 'n/a'})</li>
+              <li>Contratos: {snapshot.summaryCards.contracts.value} ({snapshot.summaryCards.contracts.status ?? 'n/a'})</li>
+              <li>Cobranza esperada: {snapshot.summaryCards.expectedCollection.value} {snapshot.summaryCards.expectedCollection.currency ?? ''} ({snapshot.summaryCards.expectedCollection.status ?? 'n/a'})</li>
+              <li>Cobranza pendiente: {snapshot.summaryCards.pendingCollection.value} {snapshot.summaryCards.pendingCollection.currency ?? ''} ({snapshot.summaryCards.pendingCollection.status ?? 'n/a'})</li>
+            </ul>
+
+            <h4>Business</h4>
+            <pre>{JSON.stringify(snapshot.dashboard.business, null, 2)}</pre>
+            <h4>Cobranza</h4>
+            <pre>{JSON.stringify(snapshot.dashboard.collection, null, 2)}</pre>
+            <h4>Pipeline</h4>
+            <pre>{JSON.stringify(snapshot.dashboard.pipeline, null, 2)}</pre>
+
+            <h4>Warnings</h4>
+            {snapshot.warnings.length === 0 ? <p className="muted">Sin warnings.</p> : (
+              <ul style={{ paddingLeft: 18 }}>{snapshot.warnings.map((item) => <li key={item}>⚠️ {item}</li>)}</ul>
+            )}
+
+            <h4>Notes</h4>
+            {snapshot.notes.length === 0 ? <p className="muted">Sin notes.</p> : (
+              <ul style={{ paddingLeft: 18 }}>{snapshot.notes.map((item) => <li key={item}>📝 {item}</li>)}</ul>
+            )}
+          </div>
+        )}
+      </SectionCard>
 
       <SectionCard title="Importador controlado CSV/TXT (local)">
         <p className="muted">Pega CSV/TSV con encabezados históricos para staging local. Se conserva raw_payload y se genera normalized_payload.</p>
