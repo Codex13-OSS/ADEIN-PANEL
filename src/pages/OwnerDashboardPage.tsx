@@ -7,9 +7,10 @@ type Props = {
   prospects: Prospect[];
   followups: Followup[];
   recommendedActions: RecommendedAction[];
+  historicalMetrics: ReturnType<typeof import('../lib/historicalMetrics').getHistoricalMetrics>;
 };
 
-function OwnerDashboardPage({ prospects, followups, recommendedActions }: Props) {
+function OwnerDashboardPage({ prospects, followups, recommendedActions, historicalMetrics }: Props) {
   const highIntention = prospects.filter((item) => item.intentionLevel === 'Alta').length;
   const pendingFollowups = followups.filter((item) => !item.completed).length;
 
@@ -17,38 +18,30 @@ function OwnerDashboardPage({ prospects, followups, recommendedActions }: Props)
     <div className="page-grid">
       <section className="stats-grid">
         {[
-          ['Prospectos totales', String(prospects.length)], ['Prospectos alta intención', String(highIntention)], ['Seguimientos pendientes', String(pendingFollowups)], ['Acciones recomendadas', String(recommendedActions.length)],
-          ['Lotes libres', '47'], ['Lotes vendidos', '32'], ['Seguimientos vencidos', String(followups.filter((item) => !item.completed && item.state === 'Vencido').length)], ['Conversión general', '24%'],
+          ['Cobranza esperada mes', `$${historicalMetrics.expectedCollectionMonth.toLocaleString('es-MX')} MXN`],
+          ['Clientes atrasados', String(historicalMetrics.clientsOverdue)],
+          ['Pagos próximos (7 días)', String(historicalMetrics.upcomingPayments.length)],
+          ['% promedio pagado', `${historicalMetrics.averagePaidPercentage}%`],
+          ['Prospectos alta intención', String(highIntention)],
+          ['Seguimientos pendientes', String(pendingFollowups)],
+          ['Lotes libres', String(historicalMetrics.lotsAvailable)],
+          ['Lotes vendidos', String(historicalMetrics.lotsSold)],
         ].map(([label, value]) => <StatCard key={label} label={label} value={value} />)}
       </section>
 
       <SectionCard title="Centro de decisiones" subtitle="Alertas comerciales prioritarias">
         <div className="decision-grid">
+          <DecisionCard level="risk" title="Alerta de mayor riesgo" description={historicalMetrics.highestRiskAlert ? `Contrato ${historicalMetrics.highestRiskAlert.contract_id} con ${historicalMetrics.highestRiskAlert.days_overdue} días de atraso.` : 'Sin alertas de riesgo alto.'} />
+          <DecisionCard level="opportunity" title="Oportunidad de recuperación" description={`Recuperación estimada: ${historicalMetrics.recoveryOpportunity}% del caso crítico si se atiende hoy.`} />
           <DecisionCard level="high" title="Prioridad alta" description={`${highIntention} prospectos con intención alta en CRM local.`} />
-          <DecisionCard level="risk" title="Riesgo comercial" description={`${pendingFollowups} seguimientos pendientes requieren contacto inmediato.`} />
-          <DecisionCard level="opportunity" title="Oportunidad" description="Predio Norte concentra mayor intención de compra esta semana." />
           <DecisionCard level="recommendation" title="Recomendación" description={recommendedActions[0]?.suggestedAction ?? 'Priorizar seguimiento comercial del día.'} />
         </div>
       </SectionCard>
 
       <SectionCard title="Resumen ejecutivo inteligente">
         <p className="executive-text">
-          CRM local actualizado: {prospects.length} prospectos activos y {pendingFollowups} seguimientos pendientes.
-          El foco operativo del día es convertir interesados en visitas guiadas y cerrar primero los pendientes críticos.
+          Capa histórica local activa con fixtures demo v018: {historicalMetrics.totalClients} clientes, {historicalMetrics.collectionRiskAlerts.length} alertas de cobranza y saldo pendiente de ${historicalMetrics.totalPendingBalance.toLocaleString('es-MX')} MXN.
         </p>
-      </SectionCard>
-
-      <SectionCard title="Embudo comercial visual">
-        <div className="funnel-steps">{[['Mensajes', 100], ['Prospectos', 72], ['Interesados', 58], ['Citas', 39], ['Separaciones', 21], ['Clientes', 16]].map((item) => <div key={item[0]}><label>{item[0]}</label><span style={{ width: `${item[1]}%` }} /></div>)}</div>
-      </SectionCard>
-
-      <SectionCard title="Rendimiento por vendedor">
-        <div className="table-premium-wrap"><table className="table-premium"><thead><tr><th>Vendedor</th><th>Leads</th><th>Citas</th><th>Separaciones</th><th>Conversión</th><th>Pendientes</th></tr></thead>
-          <tbody>
-            <tr><td>Vendedor A</td><td>18</td><td>8</td><td>3</td><td>26%</td><td>4</td></tr>
-            <tr><td>Vendedor B</td><td>16</td><td>6</td><td>2</td><td>20%</td><td>6</td></tr>
-          </tbody>
-        </table></div>
       </SectionCard>
     </div>
   );

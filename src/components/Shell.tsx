@@ -9,6 +9,7 @@ import CampaignsPage from '../pages/CampaignsPage';
 import SellersPage from '../pages/SellersPage';
 import DocumentsPage from '../pages/DocumentsPage';
 import SettingsPage from '../pages/SettingsPage';
+import { getHistoricalMetrics } from '../lib/historicalMetrics';
 import { CrmTab } from '../pages/CrmPage';
 import AdeinAnimatedBackground from './AdeinAnimatedBackground';
 import { AnalyzedConversation, CrmHistoryEvent, Followup, Prospect, RecommendedAction } from '../types/crm';
@@ -200,12 +201,14 @@ function Shell({ session, defaultSection, onLogout }: Props) {
     performance: 'Recomendaciones ejecutivas para vendedores',
   }[section]), [section]);
 
+  const historicalMetrics = useMemo(() => getHistoricalMetrics(), []);
+
   const renderPage = () => {
-    if (section === 'dashboard') return <OwnerDashboardPage prospects={prospects} followups={followups} recommendedActions={recommendedActions} />;
+    if (section === 'dashboard') return <OwnerDashboardPage prospects={prospects} followups={followups} recommendedActions={recommendedActions} historicalMetrics={historicalMetrics} />;
     if (section === 'crm' || section === 'analyze' || section === 'followups' || section === 'performance') return <CrmPage role={session.role} activeTab={activeCrmTab} onTabChange={setActiveCrmTab} prospects={prospects} followups={followups} historyEvents={historyEvents} recommendedActions={recommendedActions} analyzedConversation={MOCK_ANALYSIS} onSaveProspect={handleSaveProspect} onCreateFollowup={handleCreateFollowup} onCompleteFollowup={handleCompleteFollowup} onResetCrmDemo={handleResetCrmDemo} />;
-    if (section === 'business') return <CurrentBusinessPage />;
-    if (section === 'campaigns') return <CampaignsPage />;
-    if (section === 'sellers') return <SellersPage />;
+    if (section === 'business') return <CurrentBusinessPage historicalMetrics={historicalMetrics} />;
+    if (section === 'campaigns') return <CampaignsPage historicalMetrics={historicalMetrics} />;
+    if (section === 'sellers') return <SellersPage historicalMetrics={historicalMetrics} />;
     if (section === 'documents') return <DocumentsPage />;
     return <SettingsPage />;
   };
