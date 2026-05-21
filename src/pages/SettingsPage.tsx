@@ -21,6 +21,7 @@ import { runMigrationPlanSelfCheck } from '../lib/migrationPlanSelfCheck';
 import { EMPTY_SNAPSHOT_EXAMPLE, validateSnapshotInput } from '../lib/dbSnapshotViewer';
 import { DbDashboardSnapshot, SnapshotValidation } from '../types/dbSnapshot';
 import { useDbSnapshot } from '../context/DbSnapshotContext';
+import { DEFAULT_DB_READONLY_API_BASE_URL, fetchSnapshotFromReadonlyApi } from '../lib/dbReadonlyApiClient';
 
 export default function SettingsPage() {
   const [input, setInput] = useState('');
@@ -37,7 +38,37 @@ export default function SettingsPage() {
   const [snapshotInput, setSnapshotInput] = useState('');
   const [snapshotValidation, setSnapshotValidation] = useState<SnapshotValidation | null>(null);
   const [snapshotAppliedMessage, setSnapshotAppliedMessage] = useState<string | null>(null);
+
+  const [snapshotApiBaseUrl, setSnapshotApiBaseUrl] = useState(DEFAULT_DB_READONLY_API_BASE_URL);
+  const [snapshotApiLoadStatus, setSnapshotApiLoadStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [snapshotApiLoadMessage, setSnapshotApiLoadMessage] = useState<string | null>(null);
   const { appliedSnapshot, applySnapshot, clearSnapshot } = useDbSnapshot();
+
+
+  const handleLoadSnapshotFromReadonlyApi = async () => {
+    setSnapshotAppliedMessage(null);
+    setSnapshotApiLoadStatus('loading');
+    setSnapshotApiLoadMessage('Cargando snapshot desde API read-only...');
+
+    try {
+      const snapshotFromApi = await fetchSnapshotFromReadonlyApi(snapshotApiBaseUrl);
+      const nextRaw = JSON.stringify(snapshotFromApi, null, 2);
+      const validation = validateSnapshotInput(nextRaw);
+
+      if (!validation.ok) {
+        throw new Error(validation.messages[0] ?? 'Error de estructura al validar el snapshot recibido.');
+      }
+
+      setSnapshotInput(nextRaw);
+      setSnapshotValidation(validation);
+      setSnapshotApiLoadStatus('success');
+      setSnapshotApiLoadMessage('Snapshot cargado desde API read-only. Valídalo antes de aplicarlo al Dashboard.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'No se pudo cargar el snapshot desde API read-only.';
+      setSnapshotApiLoadStatus('error');
+      setSnapshotApiLoadMessage(message);
+    }
+  };
 
   const handleLoadEmptySnapshot = () => {
     setSnapshotInput(JSON.stringify(EMPTY_SNAPSHOT_EXAMPLE, null, 2));
@@ -187,6 +218,32 @@ export default function SettingsPage() {
 
       <SectionCard title="Snapshot read-only de BD">
         <p className="muted">Esta vista solo interpreta un JSON generado por npm run db:snapshot. No conecta el navegador a MariaDB y no escribe datos.</p>
+
+        <div style={{ marginTop: 12, border: '1px solid #d3d9e4', borderRadius: 8, padding: 12 }}>
+          <h4 style={{ marginTop: 0 }}>Cargar desde API read-only</h4>
+          <p className="muted">Esta acción consume la API read-only local. No conecta el navegador a MariaDB y no escribe datos.</p>
+          <label style={{ display: 'block', marginTop: 8 }}>
+            URL base de API read-only
+            <input
+              type="text"
+              value={snapshotApiBaseUrl}
+              onChange={(event) => setSnapshotApiBaseUrl(event.target.value)}
+              placeholder={DEFAULT_DB_READONLY_API_BASE_URL}
+              style={{ width: '100%', marginTop: 6, padding: 8 }}
+            />
+          </label>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+            <button type="button" onClick={handleLoadSnapshotFromReadonlyApi} disabled={snapshotApiLoadStatus === 'loading'}>
+              {snapshotApiLoadStatus === 'loading' ? 'Cargando snapshot...' : 'Cargar snapshot desde API read-only'}
+            </button>
+          </div>
+          {snapshotApiLoadMessage && (
+            <p className="muted" style={{ marginTop: 10 }}>
+              <strong>Estado ({snapshotApiLoadStatus}):</strong> {snapshotApiLoadMessage}
+            </p>
+          )}
+        </div>
+
         <textarea
           value={snapshotInput}
           onChange={(event) => setSnapshotInput(event.target.value)}
