@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "db:health": "node scripts/db-health-check.mjs"
+    "db:health": "node scripts/db-health-check.mjs",
+    "db:metrics": "node scripts/db-readonly-metrics.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

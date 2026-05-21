@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import mysql from 'mysql2/promise';
+import { createDbConnection, loadDbConfig, maskDbError } from './lib/db-connection.mjs';
 
 const EXPECTED_TABLES = [
   'audit_log',
@@ -17,41 +17,10 @@ const EXPECTED_TABLES = [
   'sellers'
 ];
 
-const REQUIRED_ENV = ['ADEIN_DB_HOST', 'ADEIN_DB_PORT', 'ADEIN_DB_NAME', 'ADEIN_DB_USER', 'ADEIN_DB_PASSWORD'];
-
-function maskError(error) {
-  return {
-    name: error?.name ?? 'Error',
-    message: error?.message ?? 'Unknown database error'
-  };
-}
-
-function loadConfig() {
-  const missing = REQUIRED_ENV.filter((name) => !process.env[name]);
-  if (missing.length) {
-    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
-  }
-
-  return {
-    host: process.env.ADEIN_DB_HOST,
-    port: Number(process.env.ADEIN_DB_PORT),
-    database: process.env.ADEIN_DB_NAME,
-    user: process.env.ADEIN_DB_USER,
-    password: process.env.ADEIN_DB_PASSWORD
-  };
-}
-
 async function run() {
-  const config = loadConfig();
+  const config = loadDbConfig();
 
-  const connection = await mysql.createConnection({
-    host: config.host,
-    port: config.port,
-    user: config.user,
-    password: config.password,
-    database: config.database,
-    connectTimeout: 8000
-  });
+  const connection = await createDbConnection(config);
 
   try {
     const [databaseRows] = await connection.query('SELECT DATABASE() AS active_database');
@@ -119,7 +88,7 @@ run().catch((error) => {
         status: 'error',
         mode: 'read_only',
         writesEnabled: false,
-        error: maskError(error)
+        error: maskDbError(error)
       },
       null,
       2
