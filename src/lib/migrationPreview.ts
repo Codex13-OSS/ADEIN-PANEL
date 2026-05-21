@@ -81,7 +81,7 @@ export const buildMigrationPreviewFromBatch = (batch: ImportBatch): MigrationPre
     rowWarnings.forEach((warning) => {
       preview.warnings.push({
         id: buildId('warning'),
-        code: warning.replaceAll(' ', '_'),
+        code: warning.replace(/\s+/g, '_'),
         message: warning,
         source_batch_id: batch.id,
         source_row_id: toRowId(batch.id, row.source_row),
@@ -168,7 +168,7 @@ export const detectMigrationConflicts = (preview: MigrationPreview): MigrationPr
     clientPhoneMap.set(cpKey, clientLots);
   });
 
-  lotMap.forEach((items, key) => {
+  lotMap.forEach((items) => {
     if (items.length > 1) {
       const distinctClients = new Set(items.map((i) => i.client));
       conflicts.push({
