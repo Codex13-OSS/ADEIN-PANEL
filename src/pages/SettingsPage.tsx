@@ -15,6 +15,9 @@ import { ImportSelfCheckResult, runImportSelfCheck } from '../lib/importSelfChec
 import { buildMigrationPreviewFromApprovedBatches } from '../lib/migrationPreview';
 import { runMigrationPreviewSelfCheck } from '../lib/migrationPreviewSelfCheck';
 import { MigrationPreview, MigrationPreviewSelfCheckResult } from '../types/migrationPreview';
+import { clearMigrationPlans, createMigrationPlanFromPreview, listMigrationPlans, updateMigrationPlanStatus } from '../lib/migrationPlan';
+import { MigrationPlan, MigrationPlanSelfCheckResult } from '../types/migrationPlan';
+import { runMigrationPlanSelfCheck } from '../lib/migrationPlanSelfCheck';
 
 export default function SettingsPage() {
   const [input, setInput] = useState('');
@@ -23,6 +26,8 @@ export default function SettingsPage() {
   const [selfCheckResult, setSelfCheckResult] = useState<ImportSelfCheckResult | null>(null);
   const [migrationPreview, setMigrationPreview] = useState<MigrationPreview | null>(null);
   const [migrationSelfCheckResult, setMigrationSelfCheckResult] = useState<MigrationPreviewSelfCheckResult | null>(null);
+  const [migrationPlans, setMigrationPlans] = useState<MigrationPlan[]>(() => listMigrationPlans());
+  const [migrationPlanSelfCheckResult, setMigrationPlanSelfCheckResult] = useState<MigrationPlanSelfCheckResult | null>(null);
 
   const [summaryReadError, setSummaryReadError] = useState<string | null>(null);
 
@@ -81,6 +86,7 @@ export default function SettingsPage() {
     const result = runImportSelfCheck();
     setSelfCheckResult(result);
     setLocalBatches(listImportBatches());
+    setMigrationPlans(listMigrationPlans());
   };
 
   const handleGenerateMigrationPreview = () => {
@@ -96,6 +102,32 @@ export default function SettingsPage() {
     const result = runMigrationPreviewSelfCheck();
     setMigrationSelfCheckResult(result);
     setLocalBatches(listImportBatches());
+  };
+
+
+  const handleGenerateMigrationPlan = () => {
+    if (!migrationPreview) return;
+    createMigrationPlanFromPreview(migrationPreview);
+    setMigrationPlans(listMigrationPlans());
+  };
+
+  const handleChangePlanStatus = (status: MigrationPlan['status']) => {
+    const latestPlan = migrationPlans[0];
+    if (!latestPlan) return;
+    updateMigrationPlanStatus(latestPlan.id, status);
+    setMigrationPlans(listMigrationPlans());
+  };
+
+  const handleClearMigrationPlans = () => {
+    clearMigrationPlans();
+    setMigrationPlans(listMigrationPlans());
+  };
+
+  const handleRunMigrationPlanSelfCheck = () => {
+    const result = runMigrationPlanSelfCheck();
+    setMigrationPlanSelfCheckResult(result);
+    setLocalBatches(listImportBatches());
+    setMigrationPlans(listMigrationPlans());
   };
 
   const handleClearImports = () => {
@@ -204,6 +236,49 @@ export default function SettingsPage() {
             <p className="muted"><strong>Última ejecución:</strong> {new Date(migrationSelfCheckResult.finished_at).toLocaleString()}</p>
             <ul style={{ marginTop: 10, paddingLeft: 18 }}>
               {migrationSelfCheckResult.checks.map((check) => (
+                <li key={check.id}>{check.status === 'pass' ? '✅' : '❌'} {check.label}: {check.message}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </SectionCard>
+
+
+      <SectionCard title="Plan de migración">
+        <p className="muted">Este plan no ejecuta migración ni modifica CRM.</p>
+        <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+          <button type="button" onClick={handleGenerateMigrationPlan}>Generar plan desde preview</button>
+          <button type="button" onClick={() => handleChangePlanStatus('ready_for_review')}>Marcar listo para revisión</button>
+          <button type="button" onClick={() => handleChangePlanStatus('approved')}>Aprobar plan</button>
+          <button type="button" onClick={() => handleChangePlanStatus('rejected')}>Rechazar plan</button>
+          <button type="button" onClick={() => handleChangePlanStatus('archived')}>Archivar plan</button>
+          <button type="button" onClick={handleClearMigrationPlans}>Limpiar planes locales</button>
+        </div>
+        {migrationPlans[0] && (
+          <div style={{ marginTop: 12 }}>
+            <p className="muted"><strong>ID plan:</strong> {migrationPlans[0].id}</p>
+            <p className="muted"><strong>Estado actual:</strong> {migrationPlans[0].status}</p>
+            <p className="muted"><strong>Resumen:</strong> clientes {migrationPlans[0].summary.clients}, predios {migrationPlans[0].summary.properties}, lotes {migrationPlans[0].summary.lots}, contratos {migrationPlans[0].summary.contracts}, calendario {migrationPlans[0].summary.payment_schedule}</p>
+            <p className="muted"><strong>Warnings:</strong> {migrationPlans[0].summary.warnings}</p>
+            <p className="muted"><strong>Conflicts:</strong> {migrationPlans[0].summary.conflicts}</p>
+            <ul style={{ marginTop: 10, paddingLeft: 18 }}>
+              {migrationPlans[0].warnings.slice(0, 5).map((warning) => (<li key={warning.id}>⚠️ {warning.message}</li>))}
+              {migrationPlans[0].conflicts.slice(0, 5).map((conflict) => (<li key={conflict.id}>❌ {conflict.message}</li>))}
+            </ul>
+          </div>
+        )}
+      </SectionCard>
+
+      <SectionCard title="Prueba automática del plan de migración">
+        <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+          <button type="button" onClick={handleRunMigrationPlanSelfCheck}>Ejecutar prueba automática del plan</button>
+        </div>
+        {migrationPlanSelfCheckResult && (
+          <div style={{ marginTop: 12 }}>
+            <p className="muted"><strong>Resultado general:</strong> {migrationPlanSelfCheckResult.ok ? 'OK' : 'Falló'}</p>
+            <p className="muted"><strong>Última ejecución:</strong> {new Date(migrationPlanSelfCheckResult.finished_at).toLocaleString()}</p>
+            <ul style={{ marginTop: 10, paddingLeft: 18 }}>
+              {migrationPlanSelfCheckResult.checks.map((check) => (
                 <li key={check.id}>{check.status === 'pass' ? '✅' : '❌'} {check.label}: {check.message}</li>
               ))}
             </ul>
