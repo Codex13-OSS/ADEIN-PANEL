@@ -17,7 +17,9 @@
     "db:import-staging": "node scripts/db-import-staging-write-gate.mjs",
     "db:import-staging:self-check": "node scripts/db-import-staging-write-gate-self-check.mjs",
     "db:migration-plan": "node scripts/db-migration-plan-write-gate.mjs",
-    "db:migration-plan:self-check": "node scripts/db-migration-plan-write-gate-self-check.mjs"
+    "db:migration-plan:self-check": "node scripts/db-migration-plan-write-gate-self-check.mjs",
+    "db:business-promotion": "node scripts/db-business-promotion-write-gate.mjs",
+    "db:business-promotion:self-check": "node scripts/db-business-promotion-write-gate-self-check.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
