@@ -13,7 +13,9 @@
     "db:api:readonly": "node scripts/db-readonly-api-server.mjs",
     "db:api:self-check": "node scripts/db-readonly-api-self-check.mjs",
     "db:migration:dry-run": "node scripts/db-migration-dry-run.mjs",
-    "db:migration:dry-run:self-check": "node scripts/db-migration-dry-run-self-check.mjs"
+    "db:migration:dry-run:self-check": "node scripts/db-migration-dry-run-self-check.mjs",
+    "db:import-staging": "node scripts/db-import-staging-write-gate.mjs",
+    "db:import-staging:self-check": "node scripts/db-import-staging-write-gate-self-check.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
