@@ -11,7 +11,9 @@
     "db:metrics": "node scripts/db-readonly-metrics.mjs",
     "db:snapshot": "node scripts/db-dashboard-snapshot.mjs",
     "db:api:readonly": "node scripts/db-readonly-api-server.mjs",
-    "db:api:self-check": "node scripts/db-readonly-api-self-check.mjs"
+    "db:api:self-check": "node scripts/db-readonly-api-self-check.mjs",
+    "db:migration:dry-run": "node scripts/db-migration-dry-run.mjs",
+    "db:migration:dry-run:self-check": "node scripts/db-migration-dry-run-self-check.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
