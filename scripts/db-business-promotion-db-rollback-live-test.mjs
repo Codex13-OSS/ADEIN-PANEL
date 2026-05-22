@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-const PHASE = 'v039';
+const PHASE = 'v041';
 const ALLOWED_TABLES = ['clients', 'properties', 'lots', 'contracts', 'payment_schedule'];
 const REQUIRED_GATES = {
   ADEIN_DB_ROLLBACK_LIVE_TEST: '1',
-  ADEIN_DB_WRITE_GATE: 'ROLLBACK_ONLY_V039',
+  ADEIN_DB_WRITE_GATE: 'ROLLBACK_ONLY_V041',
   ADEIN_DB_ALLOW_DEMO_REHEARSAL_ROWS: '1'
 };
 const REQUIRED_CONN_VARS = ['ADEIN_DB_HOST', 'ADEIN_DB_PORT', 'ADEIN_DB_USER', 'ADEIN_DB_PASSWORD', 'ADEIN_DB_NAME'];
@@ -32,8 +32,35 @@ function hasConnVars() {
   return REQUIRED_CONN_VARS.every((k) => !!process.env[k]);
 }
 
-function buildWhereToken(table) {
-  return `CONCAT_WS(' ', COALESCE(name,''), COALESCE(full_name,''), COALESCE(client_name,''), COALESCE(description,''), COALESCE(notes,''), COALESCE(code,''), COALESCE(contract_code,''), COALESCE(lot_code,''), COALESCE(property_name,''), COALESCE(email,''), COALESCE(reference,''), COALESCE(title,''), COALESCE(owner_name,'')) LIKE ?`;
+const TABLE_TEXT_COLUMNS_WHITELIST = {
+  clients: ['full_name', 'phone', 'email', 'status', 'source', 'notes'],
+  properties: ['name', 'location', 'status'],
+  lots: ['lot_code', 'status', 'currency'],
+  contracts: ['contract_code', 'contract_status', 'source_doc_id', 'currency'],
+  payment_schedule: ['payment_status', 'notes']
+};
+
+function buildTableSearchCondition(table, columns) {
+  const allowedColumns = TABLE_TEXT_COLUMNS_WHITELIST[table] || [];
+  const existingColumns = new Set(columns.map((c) => String(c.COLUMN_NAME || '').toLowerCase()));
+  const usableColumns = allowedColumns.filter((col) => existingColumns.has(col.toLowerCase()));
+
+  if (!usableColumns.length) {
+    return {
+      sql: '1=0',
+      params: [],
+      skipped: true,
+      reason: 'no_schema_aware_search_columns'
+    };
+  }
+
+  const expr = usableColumns.map((col) => `COALESCE(${col}, '')`).join(", ");
+  return {
+    sql: `CONCAT_WS(' ', ${expr}) LIKE ?`,
+    params: ['__TOKEN_LIKE__'],
+    skipped: false,
+    usedColumns: usableColumns
+  };
 }
 
 async function getTableMeta(connection, dbName, table) {
@@ -64,7 +91,7 @@ function buildDemoValue(table, column, token, ids) {
     if (table === 'payment_schedule' && c === 'contract_id') return ids.contracts;
   }
   if (['email'].includes(c)) return `demo+${token}@example.invalid`;
-  if (['name', 'full_name', 'client_name', 'owner_name', 'title', 'description', 'notes', 'status', 'code', 'reference', 'contract_code', 'lot_code', 'property_name'].includes(c)) return `ADEIN_V039_ROLLBACK_TEST_${table}_${token}`;
+  if (['name', 'full_name', 'client_name', 'owner_name', 'title', 'description', 'notes', 'status', 'code', 'reference', 'contract_code', 'lot_code', 'property_name', 'location', 'currency', 'payment_status', 'contract_status', 'source_doc_id', 'source'].includes(c)) return `ADEIN_V041_ROLLBACK_TEST_${table}_${token}`;
   if (['phone', 'phone_number'].includes(c)) return '0000000000';
   if (c.includes('date')) return '2026-12-31';
   if (c.includes('amount') || c.includes('price') || c.includes('total') || c.includes('balance')) return 1;
@@ -72,18 +99,29 @@ function buildDemoValue(table, column, token, ids) {
   return undefined;
 }
 
-async function countTokenRows(connection, tokenLike) {
+async function countTokenRows(connection, dbName, tokenLike) {
   const countsByTable = {};
+  const tableVerification = {};
   let total = 0;
 
   for (const table of ALLOWED_TABLES) {
-    const [rows] = await connection.query(`SELECT COUNT(*) AS total FROM ${table} WHERE ${buildWhereToken(table)}`, [tokenLike]);
+    const meta = await getTableMeta(connection, dbName, table);
+    const search = buildTableSearchCondition(table, meta);
+    if (search.skipped) {
+      countsByTable[table] = 0;
+      tableVerification[table] = { skipped: true, reason: search.reason };
+      continue;
+    }
+
+    const params = search.params.map((p) => (p === '__TOKEN_LIKE__' ? tokenLike : p));
+    const [rows] = await connection.query(`SELECT COUNT(*) AS total FROM ${table} WHERE ${search.sql}`, params);
     const tableTotal = Number(rows?.[0]?.total || 0);
     countsByTable[table] = tableTotal;
     total += tableTotal;
+    tableVerification[table] = { skipped: false, usedColumns: search.usedColumns };
   }
 
-  return { total, countsByTable };
+  return { total, countsByTable, tableVerification };
 }
 
 async function transactionalLiveTest() {
@@ -103,7 +141,7 @@ async function transactionalLiveTest() {
     database: process.env.ADEIN_DB_NAME
   });
 
-  const token = `REHEARSAL_V039_ADEIN_V039_ROLLBACK_TEST_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const token = `REHEARSAL_V041_ADEIN_V041_ROLLBACK_TEST_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const tokenLike = `%${token}%`;
   const ids = { clients: null, properties: null, lots: null, contracts: null, payment_schedule: null };
   const inserted = [];
@@ -121,7 +159,7 @@ async function transactionalLiveTest() {
       if (!meta.length) throw new Error(`table_metadata_not_found:${table}`);
     }
 
-    const beforeSnapshot = await countTokenRows(connection, tokenLike);
+    const beforeSnapshot = await countTokenRows(connection, process.env.ADEIN_DB_NAME, tokenLike);
 
     await connection.beginTransaction();
 
@@ -153,7 +191,7 @@ async function transactionalLiveTest() {
     await connection.rollback();
     rollbackExecuted = true;
 
-    const afterSnapshot = await countTokenRows(connection, tokenLike);
+    const afterSnapshot = await countTokenRows(connection, process.env.ADEIN_DB_NAME, tokenLike);
 
     return {
       ...payload,
@@ -164,7 +202,8 @@ async function transactionalLiveTest() {
         token,
         beforeCounts: beforeSnapshot.countsByTable,
         afterCounts: afterSnapshot.countsByTable,
-        insertedTables: inserted.map((x) => x.table)
+        insertedTables: inserted.map((x) => x.table),
+        tableVerification: afterSnapshot.tableVerification
       }
     };
   } finally {
@@ -182,7 +221,7 @@ async function transactionalLiveTest() {
 
 async function run() {
   const payload = basePayload();
-  const dbRequested = process.env.ADEIN_DB_ROLLBACK_LIVE_TEST === '1' || process.env.ADEIN_DB_WRITE_GATE === 'ROLLBACK_ONLY_V039';
+  const dbRequested = process.env.ADEIN_DB_ROLLBACK_LIVE_TEST === '1' || process.env.ADEIN_DB_WRITE_GATE === 'ROLLBACK_ONLY_V041';
 
   if (!dbRequested) return payload;
 

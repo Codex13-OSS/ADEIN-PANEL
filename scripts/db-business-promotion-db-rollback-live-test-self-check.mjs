@@ -3,9 +3,9 @@ import { readFileSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 
-const PHASE = 'v039';
+const PHASE = 'v041';
 const scriptPath = resolve(process.cwd(), 'scripts/db-business-promotion-db-rollback-live-test.mjs');
-const docPath = resolve(process.cwd(), 'docs/db/db-business-promotion-db-rollback-live-test-v039.md');
+const docPath = resolve(process.cwd(), 'docs/db/db-business-promotion-db-rollback-schema-aware-v041.md');
 const pkgPath = resolve(process.cwd(), 'package.json');
 
 const assertions = {};
@@ -29,6 +29,11 @@ if (assertions.scriptExists) {
   assertions.noDdlOrDestructiveSql = !/\b(CREATE|ALTER|DROP|TRUNCATE|DELETE|UPDATE)\b/i.test(source);
   assertions.noRealDataIndicators = !/real_client|production_customer|@gmail\.com|@hotmail\.com/i.test(source);
   assertions.tablesScopeOnly = /clients/.test(source) && /properties/.test(source) && /lots/.test(source) && /contracts/.test(source) && /payment_schedule/.test(source);
+  assertions.schemaAwareWhitelistPresent = source.includes('TABLE_TEXT_COLUMNS_WHITELIST');
+  assertions.tableAwareSearchBuilderPresent = source.includes('buildTableSearchCondition');
+  assertions.noGenericNameCoalesceWhere = !source.includes("CONCAT_WS(' ', COALESCE(name,''), COALESCE(full_name,'')");
+  assertions.noOpenAIIndicators = !/openai|chatgpt|gpt-/i.test(source);
+  assertions.noHardcodedCredentials = !/ADEIN_DB_PASSWORD\s*=|password\s*:\s*['"]/i.test(source);
 }
 
 const dryRun = spawnSync(process.execPath, [scriptPath], { encoding: 'utf8', env: { ...process.env } });
@@ -43,7 +48,7 @@ try {
 }
 
 if (assertions.dryRunJson) {
-  assertions.phaseV039 = dryPayload.phase === PHASE;
+  assertions.phaseV041 = dryPayload.phase === PHASE;
   assertions.modeDryRun = dryPayload.mode === 'dry_run';
   assertions.databaseModeNone = dryPayload.databaseMode === 'none';
   assertions.liveTestDisabled = dryPayload.liveTestEnabled === false;
