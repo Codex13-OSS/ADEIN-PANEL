@@ -62,3 +62,19 @@ API esperada en:
 
 ## Seguridad funcional
 “Esta acción consume la API read-only local. No conecta el navegador a MariaDB y no escribe datos.”
+
+## CORS para desarrollo local (ajuste v031)
+La API read-only ahora permite consumo desde frontend local de Vite con CORS controlado:
+
+- Orígenes permitidos:
+  - `http://127.0.0.1:5173`
+  - `http://localhost:5173`
+- Headers CORS en respuestas:
+  - `Access-Control-Allow-Origin` (solo si el Origin está permitido)
+  - `Vary: Origin`
+  - `Access-Control-Allow-Methods: GET, OPTIONS`
+  - `Access-Control-Allow-Headers: Content-Type`
+  - `Access-Control-Max-Age: 86400`
+- `OPTIONS` responde `204` y no ejecuta lecturas de BD.
+- `POST` y otros métodos no permitidos siguen en `405`.
+
