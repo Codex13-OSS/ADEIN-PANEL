@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-const PHASE = 'v041';
+const PHASE = 'v042';
 const ALLOWED_TABLES = ['clients', 'properties', 'lots', 'contracts', 'payment_schedule'];
 const REQUIRED_GATES = {
   ADEIN_DB_ROLLBACK_LIVE_TEST: '1',
-  ADEIN_DB_WRITE_GATE: 'ROLLBACK_ONLY_V041',
+  ADEIN_DB_WRITE_GATE: 'ROLLBACK_ONLY_V042',
   ADEIN_DB_ALLOW_DEMO_REHEARSAL_ROWS: '1'
 };
 const REQUIRED_CONN_VARS = ['ADEIN_DB_HOST', 'ADEIN_DB_PORT', 'ADEIN_DB_USER', 'ADEIN_DB_PASSWORD', 'ADEIN_DB_NAME'];
@@ -93,6 +93,7 @@ function buildDemoValue(table, column, token, ids) {
   if (['email'].includes(c)) return `demo+${token}@example.invalid`;
   if (['name', 'full_name', 'client_name', 'owner_name', 'title', 'description', 'notes', 'status', 'code', 'reference', 'contract_code', 'lot_code', 'property_name', 'location', 'currency', 'payment_status', 'contract_status', 'source_doc_id', 'source'].includes(c)) return `ADEIN_V041_ROLLBACK_TEST_${table}_${token}`;
   if (['phone', 'phone_number'].includes(c)) return '0000000000';
+  if (c === 'installment_number') return 1;
   if (c.includes('date')) return '2026-12-31';
   if (c.includes('amount') || c.includes('price') || c.includes('total') || c.includes('balance')) return 1;
   if (['active', 'enabled', 'is_active'].includes(c)) return 1;
@@ -141,7 +142,7 @@ async function transactionalLiveTest() {
     database: process.env.ADEIN_DB_NAME
   });
 
-  const token = `REHEARSAL_V041_ADEIN_V041_ROLLBACK_TEST_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const token = `REHEARSAL_V042_ADEIN_V042_ROLLBACK_TEST_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const tokenLike = `%${token}%`;
   const ids = { clients: null, properties: null, lots: null, contracts: null, payment_schedule: null };
   const inserted = [];
@@ -163,7 +164,16 @@ async function transactionalLiveTest() {
 
     await connection.beginTransaction();
 
-    for (const table of ALLOWED_TABLES) {
+    const relationshipInsertOrder = ['properties', 'lots', 'clients', 'contracts', 'payment_schedule'];
+    const requiredColumns = {
+      properties: ['name'],
+      lots: ['property_id', 'lot_code'],
+      clients: ['full_name'],
+      contracts: ['client_id', 'lot_id', 'contract_code'],
+      payment_schedule: ['contract_id', 'installment_number', 'due_date', 'expected_amount']
+    };
+
+    for (const table of relationshipInsertOrder) {
       const meta = await getTableMeta(connection, process.env.ADEIN_DB_NAME, table);
       const cols = [];
       const vals = [];
@@ -180,12 +190,22 @@ async function transactionalLiveTest() {
         }
       }
 
+      for (const requiredColumn of requiredColumns[table] || []) {
+        if (!cols.includes(requiredColumn)) {
+          throw new Error(`required_column_not_populated:${table}.${requiredColumn}`);
+        }
+      }
+
       if (!cols.length) throw new Error(`no_insertable_columns:${table}`);
 
       const sql = `INSERT INTO ${table} (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`;
-      const [result] = await connection.execute(sql, vals);
-      ids[table] = result.insertId || ids[table];
-      inserted.push({ table, insertId: result.insertId || null });
+      try {
+        const [result] = await connection.execute(sql, vals);
+        ids[table] = result.insertId || ids[table];
+        inserted.push({ table, insertId: result.insertId || null });
+      } catch (error) {
+        throw new Error(`relationship_insert_failed:${table}:${error?.message || 'unknown_error'}`);
+      }
     }
 
     await connection.rollback();
@@ -198,6 +218,8 @@ async function transactionalLiveTest() {
       rollbackExecuted,
       persistedRowsAfterRollback: afterSnapshot.total,
       tablesChecked: ALLOWED_TABLES,
+      relationshipInsertOrder,
+      requiredColumnsValidated: requiredColumns,
       evidence: {
         token,
         beforeCounts: beforeSnapshot.countsByTable,
@@ -221,7 +243,7 @@ async function transactionalLiveTest() {
 
 async function run() {
   const payload = basePayload();
-  const dbRequested = process.env.ADEIN_DB_ROLLBACK_LIVE_TEST === '1' || process.env.ADEIN_DB_WRITE_GATE === 'ROLLBACK_ONLY_V041';
+  const dbRequested = process.env.ADEIN_DB_ROLLBACK_LIVE_TEST === '1' || process.env.ADEIN_DB_WRITE_GATE === 'ROLLBACK_ONLY_V042';
 
   if (!dbRequested) return payload;
 

@@ -3,10 +3,10 @@ import { readFileSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 
-const PHASE = 'v041';
+const PHASE = 'v042';
 const scriptPath = resolve(process.cwd(), 'scripts/db-business-promotion-db-rollback-real-test.mjs');
 const liveScriptPath = resolve(process.cwd(), 'scripts/db-business-promotion-db-rollback-live-test.mjs');
-const docPath = resolve(process.cwd(), 'docs/db/db-business-promotion-db-rollback-schema-aware-v041.md');
+const docPath = resolve(process.cwd(), 'docs/db/db-business-promotion-rollback-required-columns-v042.md');
 const pkgPath = resolve(process.cwd(), 'package.json');
 
 const assertions = {};
@@ -40,6 +40,8 @@ if (assertions.liveScriptExists) {
   assertions.noLiveCommitCall = !liveSource.includes('.commit(');
   assertions.noLiveOpenAIIndicators = !/openai|chatgpt|gpt-/i.test(liveSource);
   assertions.noLiveHardcodedCredentials = !/ADEIN_DB_PASSWORD\s*=|password\s*:\s*['"]/i.test(liveSource);
+  assertions.relationshipAwareInsertOrderPresent = liveSource.includes("const relationshipInsertOrder = ['properties', 'lots', 'clients', 'contracts', 'payment_schedule'];");
+  assertions.requiredColumnsCovered = ['full_name','name','property_id','lot_code','client_id','lot_id','contract_code','contract_id','installment_number','due_date','expected_amount'].every((column) => liveSource.includes(column));
 }
 const dryRun = spawnSync(process.execPath, [scriptPath], { encoding: 'utf8', env: { ...process.env } });
 assertions.dryRunExitZero = dryRun.status === 0;
