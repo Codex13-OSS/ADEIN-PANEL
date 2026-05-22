@@ -1,0 +1,38 @@
+{
+  "metadata": {
+    "version": "v033",
+    "fixture": "import-staging-demo-v033",
+    "notes": "Synthetic demo data only for import staging write-gate tests."
+  },
+  "import_batches": [
+    {
+      "batch_ref": "batch_demo_v033_001",
+      "source": "demo_csv",
+      "status": "received",
+      "row_count": 2,
+      "created_by": "demo_operator_v033"
+    }
+  ],
+  "import_raw_rows": [
+    {
+      "row_ref": "raw_demo_v033_001",
+      "batch_ref": "batch_demo_v033_001",
+      "row_index": 1,
+      "payload_json": {
+        "contact_alias": "contact_demo_alpha",
+        "channel": "web_form_demo",
+        "comment": "synthetic row A"
+      }
+    },
+    {
+      "row_ref": "raw_demo_v033_002",
+      "batch_ref": "batch_demo_v033_001",
+      "row_index": 2,
+      "payload_json": {
+        "contact_alias": "contact_demo_beta",
+        "channel": "phone_form_demo",
+        "comment": "synthetic row B"
+      }
+    }
+  ]
+}
