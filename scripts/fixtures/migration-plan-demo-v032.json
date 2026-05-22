@@ -1,0 +1,39 @@
+{
+  "metadata": {
+    "planId": "plan-demo-v032-001",
+    "version": "v032",
+    "createdAt": "2026-05-22T00:00:00.000Z",
+    "source": "demo_fixture",
+    "description": "Demo migration plan for dry-run validation only"
+  },
+  "clients": [
+    { "id": "cli_demo_001", "name": "Cliente Demo Norte" },
+    { "id": "cli_demo_002", "name": "Cliente Demo Sur" }
+  ],
+  "properties": [
+    { "id": "pro_demo_001", "name": "Predio Demo Central" }
+  ],
+  "lots": [
+    { "id": "lot_demo_001", "ref": "LOTE-DEMO-001" },
+    { "id": "lot_demo_002", "ref": "LOTE-DEMO-002" }
+  ],
+  "contracts": [
+    { "id": "ctr_demo_001", "ref": "CONTRATO-DEMO-001" }
+  ],
+  "payment_schedule": [
+    { "id": "pay_demo_001", "ref": "CUOTA-DEMO-001" }
+  ],
+  "import_batches": [
+    { "id": "batch_demo_001", "ref": "BATCH-DEMO-001" }
+  ],
+  "import_raw_rows": [
+    { "id": "row_demo_001", "ref": "RAWROW-DEMO-001" },
+    { "id": "row_demo_002", "ref": "RAWROW-DEMO-002" }
+  ],
+  "migration_plans": [
+    { "id": "mplan_demo_001", "ref": "MPLAN-DEMO-001" }
+  ],
+  "audit_log": [
+    { "id": "audit_demo_001", "ref": "AUDIT-DEMO-001" }
+  ]
+}
