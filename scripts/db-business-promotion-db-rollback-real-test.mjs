@@ -2,8 +2,8 @@
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 
-const PHASE = 'v040';
-const LIVE_PHASE = 'v039';
+const PHASE = 'v041';
+const LIVE_PHASE = 'v041';
 const LIVE_SCRIPT = resolve(process.cwd(), 'scripts/db-business-promotion-db-rollback-live-test.mjs');
 
 function fail(reason, details = {}) {
@@ -67,7 +67,7 @@ function verify(payload) {
     return fail('persisted_rows_after_rollback_must_be_zero', { persistedRowsAfterRollback: payload.persistedRowsAfterRollback });
   }
 
-  if ((payload.evidence?.token || '').includes('REHEARSAL_V039_') !== true) {
+  if ((payload.evidence?.token || '').includes('REHEARSAL_V041_') !== true) {
     return fail('evidence_token_missing_expected_prefix');
   }
 

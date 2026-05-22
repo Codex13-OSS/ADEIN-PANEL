@@ -3,10 +3,10 @@ import { readFileSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 
-const PHASE = 'v040';
+const PHASE = 'v041';
 const scriptPath = resolve(process.cwd(), 'scripts/db-business-promotion-db-rollback-real-test.mjs');
 const liveScriptPath = resolve(process.cwd(), 'scripts/db-business-promotion-db-rollback-live-test.mjs');
-const docPath = resolve(process.cwd(), 'docs/db/db-business-promotion-db-rollback-real-test-v040.md');
+const docPath = resolve(process.cwd(), 'docs/db/db-business-promotion-db-rollback-schema-aware-v041.md');
 const pkgPath = resolve(process.cwd(), 'package.json');
 
 const assertions = {};
@@ -31,6 +31,16 @@ if (assertions.scriptExists) {
   assertions.noOpenAIIndicators = !/openai|chatgpt|gpt-/i.test(source);
 }
 
+
+if (assertions.liveScriptExists) {
+  const liveSource = readFileSync(liveScriptPath, 'utf8');
+  assertions.schemaAwareWhitelistPresent = liveSource.includes('TABLE_TEXT_COLUMNS_WHITELIST');
+  assertions.noGenericNameCoalesceWhere = !liveSource.includes("CONCAT_WS(' ', COALESCE(name,''), COALESCE(full_name,'')");
+  assertions.tableAwareSearchBuilderPresent = liveSource.includes('buildTableSearchCondition');
+  assertions.noLiveCommitCall = !liveSource.includes('.commit(');
+  assertions.noLiveOpenAIIndicators = !/openai|chatgpt|gpt-/i.test(liveSource);
+  assertions.noLiveHardcodedCredentials = !/ADEIN_DB_PASSWORD\s*=|password\s*:\s*['"]/i.test(liveSource);
+}
 const dryRun = spawnSync(process.execPath, [scriptPath], { encoding: 'utf8', env: { ...process.env } });
 assertions.dryRunExitZero = dryRun.status === 0;
 
@@ -44,7 +54,7 @@ try {
 }
 
 if (assertions.dryRunJson) {
-  assertions.phaseIsV040 = dryPayload.phase === PHASE;
+  assertions.phaseIsV041 = dryPayload.phase === PHASE;
   assertions.modeDryRun = dryPayload.mode === 'dry_run';
   assertions.commitAllowedFalse = dryPayload.commitAllowed === false;
   assertions.commitExecutedFalse = dryPayload.commitExecuted === false;
