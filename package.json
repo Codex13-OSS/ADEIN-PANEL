@@ -23,7 +23,9 @@
     "db:business-promotion:preview": "node scripts/db-business-promotion-transaction-preview.mjs",
     "db:business-promotion:preview:self-check": "node scripts/db-business-promotion-transaction-preview-self-check.mjs",
     "db:business-promotion:rehearsal": "node scripts/db-business-promotion-write-rehearsal.mjs",
-    "db:business-promotion:rehearsal:self-check": "node scripts/db-business-promotion-write-rehearsal-self-check.mjs"
+    "db:business-promotion:rehearsal:self-check": "node scripts/db-business-promotion-write-rehearsal-self-check.mjs",
+    "db:business-promotion:db-rollback-rehearsal": "node scripts/db-business-promotion-db-rollback-rehearsal.mjs",
+    "db:business-promotion:db-rollback-rehearsal:self-check": "node scripts/db-business-promotion-db-rollback-rehearsal-self-check.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
