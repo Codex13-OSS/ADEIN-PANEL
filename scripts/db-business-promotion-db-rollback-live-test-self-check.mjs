@@ -3,9 +3,9 @@ import { readFileSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 
-const PHASE = 'v041';
+const PHASE = 'v042';
 const scriptPath = resolve(process.cwd(), 'scripts/db-business-promotion-db-rollback-live-test.mjs');
-const docPath = resolve(process.cwd(), 'docs/db/db-business-promotion-db-rollback-schema-aware-v041.md');
+const docPath = resolve(process.cwd(), 'docs/db/db-business-promotion-rollback-required-columns-v042.md');
 const pkgPath = resolve(process.cwd(), 'package.json');
 
 const assertions = {};
@@ -24,6 +24,7 @@ if (!assertions.npmScriptSelfCheck) failures.push('missing_npm_script_self_check
 
 if (assertions.scriptExists) {
   const source = readFileSync(scriptPath, 'utf8');
+  const liveOrderChecks = (predicate) => { try { return predicate(source); } catch { return false; } };
   assertions.noConnectionCommitCall = !source.includes('connection.commit(');
   assertions.noDotCommitExecutable = !source.includes('.commit(');
   assertions.noDdlOrDestructiveSql = !/\b(CREATE|ALTER|DROP|TRUNCATE|DELETE|UPDATE)\b/i.test(source);
@@ -34,6 +35,8 @@ if (assertions.scriptExists) {
   assertions.noGenericNameCoalesceWhere = !source.includes("CONCAT_WS(' ', COALESCE(name,''), COALESCE(full_name,'')");
   assertions.noOpenAIIndicators = !/openai|chatgpt|gpt-/i.test(source);
   assertions.noHardcodedCredentials = !/ADEIN_DB_PASSWORD\s*=|password\s*:\s*['"]/i.test(source);
+  assertions.relationshipAwareInsertOrderPresent = source.includes("const relationshipInsertOrder = ['properties', 'lots', 'clients', 'contracts', 'payment_schedule'];");
+  assertions.requiredColumnsCovered = ['full_name','name','property_id','lot_code','client_id','lot_id','contract_code','contract_id','installment_number','due_date','expected_amount'].every((column) => source.includes(column));
 }
 
 const dryRun = spawnSync(process.execPath, [scriptPath], { encoding: 'utf8', env: { ...process.env } });
