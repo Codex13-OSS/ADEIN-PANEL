@@ -29,7 +29,9 @@
     "db:business-promotion:db-rollback-live-test": "node scripts/db-business-promotion-db-rollback-live-test.mjs",
     "db:business-promotion:db-rollback-live-test:self-check": "node scripts/db-business-promotion-db-rollback-live-test-self-check.mjs",
     "db:business-promotion:db-rollback-real-test": "node scripts/db-business-promotion-db-rollback-real-test.mjs",
-    "db:business-promotion:db-rollback-real-test:self-check": "node scripts/db-business-promotion-db-rollback-real-test-self-check.mjs"
+    "db:business-promotion:db-rollback-real-test:self-check": "node scripts/db-business-promotion-db-rollback-real-test-self-check.mjs",
+    "db:controlled-write:dry-run": "node scripts/db-controlled-write-dry-run.mjs",
+    "db:controlled-write:dry-run:self-check": "node scripts/db-controlled-write-dry-run-self-check.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
