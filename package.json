@@ -37,7 +37,9 @@
     "db:controlled-write:preflight:readonly-verification": "node scripts/db-controlled-write-preflight-readonly-verification.mjs",
     "db:controlled-write:preflight:readonly-verification:self-check": "node scripts/db-controlled-write-preflight-readonly-verification-self-check.mjs",
     "db:controlled-write:real-rehearsal": "node scripts/db-controlled-real-write-rehearsal.mjs",
-    "db:controlled-write:real-rehearsal:self-check": "node scripts/db-controlled-real-write-rehearsal-self-check.mjs"
+    "db:controlled-write:real-rehearsal:self-check": "node scripts/db-controlled-real-write-rehearsal-self-check.mjs",
+    "db:controlled-write:persistent-candidate": "node scripts/db-controlled-persistent-write-candidate.mjs",
+    "db:controlled-write:persistent-candidate:self-check": "node scripts/db-controlled-persistent-write-candidate-self-check.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
