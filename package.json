@@ -53,7 +53,9 @@
     "db:prewrite-approval:gate": "node scripts/db-prewrite-approval-gate.mjs",
     "db:prewrite-approval:gate:self-check": "node scripts/db-prewrite-approval-gate-self-check.mjs",
     "db:controlled-minimum-write:candidate": "node scripts/db-controlled-minimum-persistent-write-candidate.mjs",
-    "db:controlled-minimum-write:candidate:self-check": "node scripts/db-controlled-minimum-persistent-write-candidate-self-check.mjs"
+    "db:controlled-minimum-write:candidate:self-check": "node scripts/db-controlled-minimum-persistent-write-candidate-self-check.mjs",
+    "db:controlled-transaction:rollback-rehearsal": "node scripts/db-controlled-transaction-rollback-rehearsal.mjs",
+    "db:controlled-transaction:rollback-rehearsal:self-check": "node scripts/db-controlled-transaction-rollback-rehearsal-self-check.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
