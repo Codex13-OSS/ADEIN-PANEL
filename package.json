@@ -51,7 +51,9 @@
     "db:backup-snapshot:evidence": "node scripts/db-backup-snapshot-evidence.mjs",
     "db:backup-snapshot:evidence:self-check": "node scripts/db-backup-snapshot-evidence-self-check.mjs",
     "db:prewrite-approval:gate": "node scripts/db-prewrite-approval-gate.mjs",
-    "db:prewrite-approval:gate:self-check": "node scripts/db-prewrite-approval-gate-self-check.mjs"
+    "db:prewrite-approval:gate:self-check": "node scripts/db-prewrite-approval-gate-self-check.mjs",
+    "db:controlled-minimum-write:candidate": "node scripts/db-controlled-minimum-persistent-write-candidate.mjs",
+    "db:controlled-minimum-write:candidate:self-check": "node scripts/db-controlled-minimum-persistent-write-candidate-self-check.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
