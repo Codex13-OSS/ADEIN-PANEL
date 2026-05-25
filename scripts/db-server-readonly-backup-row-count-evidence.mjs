@@ -4,8 +4,8 @@ import fs from 'node:fs';
 
 const phase = 'v053';
 const name = 'server_readonly_backup_row_count_evidence';
-const expectedBaseTag = 'v0.1.42-adein-crm-server-staging-preflight';
-const expectedBaseHead = '8ca90f4';
+const expectedBaseTag = 'v0.1.43-adein-crm-server-readonly-backup-row-count-evidence';
+const expectedBaseHead = 'e871e8e';
 
 const allowedTables = ['clients', 'properties', 'lots', 'contracts', 'payment_schedule'];
 const forbiddenTables = [
@@ -45,6 +45,43 @@ function parseEnvFile(filePath) {
   return env;
 }
 
+
+function resolveDbConfig(envData) {
+  const dbKeys = ['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD'];
+  const adeinKeys = ['ADEIN_DB_HOST', 'ADEIN_DB_PORT', 'ADEIN_DB_NAME', 'ADEIN_DB_USER', 'ADEIN_DB_PASSWORD'];
+
+  const hasAnyDbKey = dbKeys.some((key) => envData[key]);
+  const selectedKeys = hasAnyDbKey ? dbKeys : adeinKeys;
+  const keyScheme = hasAnyDbKey ? 'DB_*' : 'ADEIN_DB_*';
+  const missingKeys = selectedKeys.filter((key) => !envData[key]);
+
+  if (missingKeys.length > 0) {
+    throw new Error(
+      'Missing required DB env vars. Expected either DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD or ADEIN_DB_HOST/ADEIN_DB_PORT/ADEIN_DB_NAME/ADEIN_DB_USER/ADEIN_DB_PASSWORD'
+    );
+  }
+
+  if (keyScheme === 'DB_*') {
+    return {
+      host: envData.DB_HOST,
+      port: Number(envData.DB_PORT),
+      database: envData.DB_NAME,
+      user: envData.DB_USER,
+      password: envData.DB_PASSWORD,
+      keyScheme
+    };
+  }
+
+  return {
+    host: envData.ADEIN_DB_HOST,
+    port: Number(envData.ADEIN_DB_PORT),
+    database: envData.ADEIN_DB_NAME,
+    user: envData.ADEIN_DB_USER,
+    password: envData.ADEIN_DB_PASSWORD,
+    keyScheme
+  };
+}
+
 function validateReadOnlyQuery(sql) {
   const normalized = sql.replace(/\s+/g, ' ').trim();
   if (!/^SELECT\s+/i.test(normalized)) return false;
@@ -74,6 +111,7 @@ async function run() {
     databaseConnectionAttempted: false,
     databaseConnected: false,
     sourceOfCredentials: 'external_env_file_or_not_loaded',
+    credentialKeyScheme: 'not_loaded',
     baseCheckpoint: {
       tag: expectedBaseTag,
       expectedHead: expectedBaseHead
@@ -155,20 +193,16 @@ async function run() {
     }
 
     const envData = parseEnvFile(envFilePath);
-    const requiredKeys = ['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD'];
-    const missingKeys = requiredKeys.filter((key) => !envData[key]);
-
-    if (missingKeys.length > 0) {
-      throw new Error(`Missing required DB env vars: ${missingKeys.join(', ')}`);
-    }
+    const dbConfig = resolveDbConfig(envData);
+    payload.credentialKeyScheme = dbConfig.keyScheme;
 
     const { createConnection } = await import('mysql2/promise');
     const connection = await createConnection({
-      host: envData.DB_HOST,
-      port: Number(envData.DB_PORT),
-      database: envData.DB_NAME,
-      user: envData.DB_USER,
-      password: envData.DB_PASSWORD,
+      host: dbConfig.host,
+      port: dbConfig.port,
+      database: dbConfig.database,
+      user: dbConfig.user,
+      password: dbConfig.password,
       ssl: envData.DB_SSL === '1' ? {} : undefined
     });
 
