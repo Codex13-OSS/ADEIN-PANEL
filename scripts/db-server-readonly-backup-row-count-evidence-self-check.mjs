@@ -83,6 +83,36 @@ function checkMainScriptSqlSafety() {
   }
 }
 
+
+function checkEnvKeyCompatibilityAndNoSecretsLeak() {
+  const source = fs.readFileSync(mainScriptPath, 'utf8');
+
+  const requiredDbKeys = ['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD'];
+  const requiredAdeinKeys = ['ADEIN_DB_HOST', 'ADEIN_DB_PORT', 'ADEIN_DB_NAME', 'ADEIN_DB_USER', 'ADEIN_DB_PASSWORD'];
+
+  for (const key of requiredDbKeys) {
+    assert(source.includes(key), `Main script must include ${key}.`);
+  }
+
+  for (const key of requiredAdeinKeys) {
+    assert(source.includes(key), `Main script must include ${key}.`);
+  }
+
+  assert(source.includes("sourceOfCredentials = 'external_env_file'") || source.includes("sourceOfCredentials: 'external_env_file'"), 'Main script must keep sourceOfCredentials=external_env_file.');
+  assert(source.includes('credentialKeyScheme'), 'Main script must expose credentialKeyScheme in payload.');
+
+  const forbiddenLeakPatterns = [
+    'console.log(envData.DB_PASSWORD',
+    'console.log(dbConfig.password',
+    'process.stdout.write(envData.DB_PASSWORD',
+    'process.stdout.write(dbConfig.password',
+  ];
+
+  for (const pattern of forbiddenLeakPatterns) {
+    assert(!source.includes(pattern), `Potential credential leak pattern detected: ${pattern}`);
+  }
+}
+
 function checkPackageScripts() {
   const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 
@@ -118,6 +148,7 @@ function checkForbiddenPathsUntouched() {
 try {
   runMainDefault();
   checkMainScriptSqlSafety();
+  checkEnvKeyCompatibilityAndNoSecretsLeak();
   checkPackageScripts();
   checkForbiddenPathsUntouched();
 
