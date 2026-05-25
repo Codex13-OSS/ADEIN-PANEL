@@ -55,7 +55,9 @@
     "db:controlled-minimum-write:candidate": "node scripts/db-controlled-minimum-persistent-write-candidate.mjs",
     "db:controlled-minimum-write:candidate:self-check": "node scripts/db-controlled-minimum-persistent-write-candidate-self-check.mjs",
     "db:controlled-transaction:rollback-rehearsal": "node scripts/db-controlled-transaction-rollback-rehearsal.mjs",
-    "db:controlled-transaction:rollback-rehearsal:self-check": "node scripts/db-controlled-transaction-rollback-rehearsal-self-check.mjs"
+    "db:controlled-transaction:rollback-rehearsal:self-check": "node scripts/db-controlled-transaction-rollback-rehearsal-self-check.mjs",
+    "db:minimum-write:approval-artifact": "node scripts/db-minimum-persistent-write-approval-artifact.mjs",
+    "db:minimum-write:approval-artifact:self-check": "node scripts/db-minimum-persistent-write-approval-artifact-self-check.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
