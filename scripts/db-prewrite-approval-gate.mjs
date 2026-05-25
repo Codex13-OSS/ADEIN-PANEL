@@ -90,6 +90,8 @@ async function run() {
     noSchemaChanges: true,
     noDataMigration: true,
     productionPortTouched: false,
+    productionHealthChecked: false,
+    stagingHealthChecked: false,
     pm2Modified: false,
     baseCheckpoint: { tag: baseTag, expectedHead },
     previousBackupEvidence: {
@@ -203,7 +205,8 @@ async function run() {
 
   payload.healthChecks.production3006 = await checkHealth(payload.healthChecks.production3006.url);
   payload.healthChecks.staging3016 = await checkHealth(payload.healthChecks.staging3016.url);
-  payload.productionPortTouched = true;
+  payload.productionHealthChecked = payload.healthChecks.production3006.checked;
+  payload.stagingHealthChecked = payload.healthChecks.staging3016.checked;
 
   if (!payload.previousBackupEvidence.sha256Matches) payload.ok = false;
   if (payload.healthChecks.production3006.status !== 'alive' || payload.healthChecks.staging3016.status !== 'alive') payload.ok = false;

@@ -33,6 +33,9 @@ function main() {
   assert.equal(data.commitExecuted, false);
   assert.equal(data.persistentWriteExecuted, false);
   assert.equal(data.noWriteSqlExecuted, true);
+  assert.equal(data.productionPortTouched, false);
+  assert.equal(data.productionHealthChecked, false);
+  assert.equal(data.stagingHealthChecked, false);
   assert.ok(data.approvalArtifact);
   assert.ok(data.minimumPersistentWriteCandidate);
 

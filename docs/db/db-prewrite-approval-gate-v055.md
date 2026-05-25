@@ -17,6 +17,9 @@ Comportamiento esperado:
 - `dryRun: true`
 - `approvalGateOnly: true`
 - sin conexión a BD
+- `productionPortTouched: false`
+- `productionHealthChecked: false`
+- `stagingHealthChecked: false`
 - sin SQL de escritura
 
 ## Modo controlado read-only (servidor)
@@ -37,7 +40,7 @@ En este modo el script puede:
   - `clients`, `properties`, `lots`, `contracts`, `payment_schedule`,
 - validar existencia de evidence JSON + SQL,
 - calcular SHA256 del SQL y compararlo,
-- revisar salud de `:3006` y `:3016` por HTTP HEAD/GET.
+- revisar salud de `:3006` y `:3016` por HTTP HEAD/GET, marcando `productionHealthChecked/stagingHealthChecked` sin cambiar `productionPortTouched` (permanece `false`).
 
 ## Qué valida del backup v054
 - existencia de `backup_evidence_v054.json`,
