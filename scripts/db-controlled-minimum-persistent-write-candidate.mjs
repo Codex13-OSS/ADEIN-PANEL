@@ -3,15 +3,16 @@
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 
-const phase = 'v056';
+const phase = 'v056.1';
 const mode = 'controlled_minimum_persistent_write_candidate';
 
-const baseTag = 'v0.1.46-adein-crm-prewrite-approval-gate';
-const expectedHead = '5e09e5b';
+const baseTag = 'v0.1.47-adein-crm-controlled-minimum-persistent-write-candidate';
+const expectedHead = 'c9f0ab0';
 const requiredBackupPath = '/root/adein-backups/adein_crm/v054/2026-05-25T20-36-55-317Z/adein_crm_v054_2026-05-25T20-36-55-317Z.sql';
 const requiredBackupSha256 = '3e9d503196a07df814e22a0f48d0aac196d257131220184a88461994a0db044d';
 const requiredApprovalToken = 'APPROVE_V056_MINIMUM_SYNTHETIC_PERSISTENT_WRITE';
 
+const expectedRowCountTables = ['clients', 'properties', 'lots', 'contracts', 'payment_schedule'];
 const allowedTables = ['properties', 'lots', 'clients', 'contracts', 'payment_schedule'];
 const forbiddenTables = [
   'crm_users',
@@ -37,11 +38,43 @@ const dangerousEnvChecks = [
   ['ADEIN_DB_APPROVAL_TOKEN', requiredApprovalToken]
 ];
 
-function fail(payload, error) {
+function fail(payload, abortReason) {
   payload.ok = false;
-  payload.error = error;
+  payload.abortReason = abortReason;
   process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
   process.exit(1);
+}
+
+function applyEnvFile(filePath) {
+  const content = fs.readFileSync(filePath, 'utf8');
+  for (const rawLine of content.split(/\r?\n/u)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#')) continue;
+    const eqIndex = line.indexOf('=');
+    if (eqIndex <= 0) continue;
+
+    const key = line.slice(0, eqIndex).trim();
+    let value = line.slice(eqIndex + 1).trim();
+
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+
+    process.env[key] = value;
+  }
+}
+
+function getRequiredCounts() {
+  return {
+    clients: 0,
+    properties: 0,
+    lots: 0,
+    contracts: 0,
+    payment_schedule: 0
+  };
 }
 
 async function run() {
@@ -75,13 +108,10 @@ async function run() {
       actualSha256: null,
       sha256Matches: false
     },
-    requiredCurrentRowCountsBeforeWrite: {
-      clients: 0,
-      properties: 0,
-      lots: 0,
-      contracts: 0,
-      payment_schedule: 0
-    },
+    requiredCurrentRowCountsBeforeWrite: getRequiredCounts(),
+    actualCurrentRowCounts: null,
+    rowCountsMatchExpected: false,
+    expectedRowCountTables,
     syntheticCandidateRows: {
       properties: '1 synthetic row',
       lots: '1 synthetic row related to property',
@@ -153,17 +183,78 @@ async function run() {
     fail(payload, 'Controlled read-only mode requires ADEIN_DB_ENV_FILE and file must exist');
   }
 
-  payload.databaseConnectionAttempted = true;
-  payload.controlledReadonlyChecks.dbReadConnectionAttempted = true;
+  applyEnvFile(envFilePath);
+
   payload.requiredBackup.exists = fs.existsSync(requiredBackupPath);
-  if (!payload.requiredBackup.exists) fail(payload, 'Abort condition: backup missing');
+  if (!payload.requiredBackup.exists) {
+    fail(payload, 'Abort condition: backup missing');
+  }
 
   const backupBuffer = fs.readFileSync(requiredBackupPath);
   payload.requiredBackup.actualSha256 = crypto.createHash('sha256').update(backupBuffer).digest('hex');
   payload.requiredBackup.sha256Matches = payload.requiredBackup.actualSha256 === requiredBackupSha256;
-  if (!payload.requiredBackup.sha256Matches) fail(payload, 'Abort condition: backup sha mismatch');
+  if (!payload.requiredBackup.sha256Matches) {
+    fail(payload, 'Abort condition: backup sha mismatch');
+  }
 
-  payload.controlledReadonlyChecks.rowCountsVerified = false;
+  payload.databaseConnectionAttempted = true;
+  payload.controlledReadonlyChecks.dbReadConnectionAttempted = true;
+
+  const requiredAdeinDbEnvVars = [
+    'ADEIN_DB_HOST',
+    'ADEIN_DB_PORT',
+    'ADEIN_DB_USER',
+    'ADEIN_DB_PASSWORD',
+    'ADEIN_DB_NAME'
+  ];
+
+  const hasAllRequiredAdeinDbEnvVars = requiredAdeinDbEnvVars.every((key) => {
+    const value = process.env[key];
+    return typeof value === 'string' && value.trim().length > 0;
+  });
+
+  if (!hasAllRequiredAdeinDbEnvVars) {
+    fail(payload, 'Abort condition: missing required ADEIN_DB_* env vars');
+  }
+
+  const { createConnection } = await import('mysql2/promise');
+
+  const connection = await createConnection({
+    host: process.env.ADEIN_DB_HOST,
+    port: Number(process.env.ADEIN_DB_PORT),
+    user: process.env.ADEIN_DB_USER,
+    password: process.env.ADEIN_DB_PASSWORD,
+    database: process.env.ADEIN_DB_NAME
+  });
+
+  const counts = {};
+  try {
+    for (const table of expectedRowCountTables) {
+      const sql = 'SELECT COUNT(*) AS count FROM `'+table+'`';
+      const [rows] = await connection.query(sql);
+      const raw = rows?.[0]?.count;
+      const value = Number(raw);
+      if (!Number.isFinite(value)) {
+        fail(payload, `Abort condition: invalid row count for table ${table}`);
+      }
+      counts[table] = value;
+    }
+  } catch (error) {
+    fail(payload, `Abort condition: controlled read-only verification failed (${error.message})`);
+  } finally {
+    await connection.end().catch(() => {});
+  }
+
+  payload.actualCurrentRowCounts = counts;
+  const required = payload.requiredCurrentRowCountsBeforeWrite;
+  payload.rowCountsMatchExpected = expectedRowCountTables.every((table) => counts[table] === required[table]);
+  payload.controlledReadonlyChecks.rowCountsVerified = payload.rowCountsMatchExpected;
+
+  if (!payload.rowCountsMatchExpected) {
+    payload.controlledReadonlyChecks.rowCountsVerified = false;
+    fail(payload, 'Abort condition: row counts are not all zero / expected values mismatch');
+  }
+
   process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
 }
 

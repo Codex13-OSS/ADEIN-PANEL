@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
@@ -24,6 +25,7 @@ function runScript(extraEnv = {}) {
 function main() {
   const expectedBackupPath = '/root/adein-backups/adein_crm/v054/2026-05-25T20-36-55-317Z/adein_crm_v054_2026-05-25T20-36-55-317Z.sql';
   const expectedSha = '3e9d503196a07df814e22a0f48d0aac196d257131220184a88461994a0db044d';
+  const expectedTables = ['clients', 'properties', 'lots', 'contracts', 'payment_schedule'];
 
   const { result, data } = runScript();
   assert.equal(result.status, 0);
@@ -34,6 +36,7 @@ function main() {
   assert.equal(data.commitAllowed, false);
   assert.equal(data.commitExecuted, false);
   assert.equal(data.persistentWriteExecuted, false);
+  assert.equal(data.databaseConnectionAttempted, false);
   assert.equal(data.noWriteSqlExecuted, true);
   assert.equal(data.syntheticDataOnly, true);
   assert.equal(data.realDataUsed, false);
@@ -52,9 +55,35 @@ function main() {
     payment_schedule: 0
   });
 
+  assert.deepEqual(data.expectedRowCountTables, expectedTables);
+  assert.equal(data.controlledReadonlyChecks.rowCountsVerified, false);
+  assert.equal(data.controlledReadonlyChecks.dbReadConnectionAttempted, false);
+
   assert.equal(data.approvalGate.requiredToken, 'APPROVE_V056_MINIMUM_SYNTHETIC_PERSISTENT_WRITE');
   assert.equal(data.approvalGate.tokenProvided, false);
   assert.equal(data.approvalGate.commitStillBlocked, true);
+
+  const scriptContent = fs.readFileSync(scriptPath, 'utf8');
+  for (const tableName of expectedTables) {
+    assert.ok(scriptContent.includes(`'${tableName}'`), `Missing expected table literal: ${tableName}`);
+  }
+
+  assert.ok(!scriptContent.includes('psql'));
+  assert.ok(!scriptContent.includes('COUNT(*)::bigint::text'));
+  assert.ok(scriptContent.includes("mysql2/promise"));
+  assert.ok(scriptContent.includes('SELECT COUNT(*) AS count FROM'));
+
+  assert.ok(scriptContent.includes('process.env.ADEIN_DB_HOST'));
+  assert.ok(scriptContent.includes('process.env.ADEIN_DB_PORT'));
+  assert.ok(scriptContent.includes('process.env.ADEIN_DB_USER'));
+  assert.ok(scriptContent.includes('process.env.ADEIN_DB_PASSWORD'));
+  assert.ok(scriptContent.includes('process.env.ADEIN_DB_NAME'));
+
+  assert.ok(!scriptContent.includes('process.env.DB_HOST'));
+  assert.ok(!scriptContent.includes('process.env.DB_PORT'));
+  assert.ok(!scriptContent.includes('process.env.DB_USER'));
+  assert.ok(!scriptContent.includes('process.env.DB_PASSWORD'));
+  assert.ok(!scriptContent.includes('process.env.DB_NAME'));
 
   const dangerousCases = [
     { ADEIN_DB_COMMIT: '1' },
@@ -72,14 +101,20 @@ function main() {
     const blocked = runScript(envCase);
     assert.equal(blocked.result.status, 1);
     assert.equal(blocked.data.ok, false);
+    assert.ok(!JSON.stringify(blocked.data).includes('DB_PASSWORD'));
   }
 
-  process.stdout.write(`${JSON.stringify({ ok: true, phase: 'v056', mode: 'controlled_minimum_persistent_write_candidate_self_check', assertions: 'all_passed' }, null, 2)}\n`);
+  const futureTokenRun = runScript({ ADEIN_DB_APPROVAL_TOKEN: 'SOME_FUTURE_TOKEN' });
+  assert.equal(futureTokenRun.result.status, 0);
+  assert.equal(futureTokenRun.data.commitAllowed, false);
+  assert.equal(futureTokenRun.data.commitExecuted, false);
+
+  process.stdout.write(`${JSON.stringify({ ok: true, phase: 'v056.1', mode: 'controlled_minimum_persistent_write_candidate_self_check', assertions: 'all_passed' }, null, 2)}\n`);
 }
 
 try {
   main();
 } catch (error) {
-  process.stdout.write(`${JSON.stringify({ ok: false, phase: 'v056', mode: 'controlled_minimum_persistent_write_candidate_self_check', error: error.message }, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({ ok: false, phase: 'v056.1', mode: 'controlled_minimum_persistent_write_candidate_self_check', error: error.message }, null, 2)}\n`);
   process.exit(1);
 }
