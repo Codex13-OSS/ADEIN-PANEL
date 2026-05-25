@@ -47,7 +47,9 @@
     "db:server-staging:preflight": "node scripts/db-server-staging-preflight.mjs",
     "db:server-staging:preflight:self-check": "node scripts/db-server-staging-preflight-self-check.mjs",
     "db:server-readonly:evidence": "node scripts/db-server-readonly-backup-row-count-evidence.mjs",
-    "db:server-readonly:evidence:self-check": "node scripts/db-server-readonly-backup-row-count-evidence-self-check.mjs"
+    "db:server-readonly:evidence:self-check": "node scripts/db-server-readonly-backup-row-count-evidence-self-check.mjs",
+    "db:backup-snapshot:evidence": "node scripts/db-backup-snapshot-evidence.mjs",
+    "db:backup-snapshot:evidence:self-check": "node scripts/db-backup-snapshot-evidence-self-check.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
