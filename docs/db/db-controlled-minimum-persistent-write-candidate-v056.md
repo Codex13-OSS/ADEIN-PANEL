@@ -79,3 +79,59 @@ npm run build
 
 ## Siguiente fase sugerida
 Rehearsal transaccional **rollback-only** controlado en servidor antes de cualquier COMMIT persistente futuro.
+
+## v056.1 — Controlled Read-Only Row Counts Evidence Fix
+
+### Razón del patch
+En v056 el modo controlled read-only verificaba env/backup/SHA, pero dejaba `controlledReadonlyChecks.rowCountsVerified:false` sin evidencia de conteos reales en BD. Este patch agrega esa evidencia mínima requerida para avanzar a v057.
+
+### Cambio funcional en controlled read-only
+Con:
+- `ADEIN_V056_CONTROLLED_READONLY=1`
+- `ADEIN_DB_ENV_FILE=/root/adein-secrets/adein-crm-db.env`
+
+el script ahora:
+1. Carga el env file externo sin imprimir secretos.
+2. Verifica backup v054 (`exists:true` y `sha256Matches:true`).
+3. Intenta conexión de solo lectura a MariaDB (mysql2/promise).
+4. Ejecuta únicamente `SELECT COUNT(*) AS count FROM `<tablaPermitida>`` sobre:
+   - `clients`
+   - `properties`
+   - `lots`
+   - `contracts`
+   - `payment_schedule`
+
+### Motor y compatibilidad
+- BD real objetivo: MariaDB (`adein_crm`).
+- Verificación read-only implementada con `mysql2/promise`.
+- No usa `psql` ni sintaxis PostgreSQL.
+
+### Nuevos campos de artifact
+- `actualCurrentRowCounts`
+- `rowCountsMatchExpected`
+- `expectedRowCountTables`
+- `controlledReadonlyChecks.rowCountsVerified:true` (solo cuando todas las tablas existen y los conteos coinciden con `requiredCurrentRowCountsBeforeWrite`)
+
+### Criterios de fallo (ok:false + exit code 1)
+- Falta `ADEIN_DB_ENV_FILE` o el archivo no existe.
+- Backup requerido inexistente.
+- SHA256 del backup no coincide.
+- Falla la conexión de lectura a BD.
+- Falta alguna tabla objetivo o falla el `SELECT COUNT(*)`.
+- Algún conteo difiere de `requiredCurrentRowCountsBeforeWrite` (cero en todas las tablas requeridas).
+
+En todos los casos de fallo se incluye `abortReason` claro y, cuando existe, `actualCurrentRowCounts`.
+
+### Comando de validación en servidor
+```bash
+ADEIN_V056_CONTROLLED_READONLY=1 \
+ADEIN_DB_ENV_FILE=/root/adein-secrets/adein-crm-db.env \
+npm run db:controlled-minimum-write:candidate
+```
+
+### Garantías que se mantienen
+- Sin INSERT/UPDATE/DELETE.
+- Sin transacción de escritura.
+- Sin COMMIT.
+- Sin migraciones.
+- `writesEnabled:false`, `commitAllowed:false`, `commitExecuted:false`, `persistentWriteExecuted:false`.
