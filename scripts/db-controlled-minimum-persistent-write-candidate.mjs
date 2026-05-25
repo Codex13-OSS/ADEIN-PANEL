@@ -2,6 +2,7 @@
 
 import fs from 'node:fs';
 import crypto from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 
 const phase = 'v056.1';
 const mode = 'controlled_minimum_persistent_write_candidate';
