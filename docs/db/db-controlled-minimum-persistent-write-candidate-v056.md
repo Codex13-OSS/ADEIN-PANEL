@@ -105,6 +105,8 @@ el script ahora:
 - BD real objetivo: MariaDB (`adein_crm`).
 - Verificación read-only implementada con `mysql2/promise`.
 - No usa `psql` ni sintaxis PostgreSQL.
+- Usa variables `ADEIN_DB_HOST`, `ADEIN_DB_PORT`, `ADEIN_DB_USER`, `ADEIN_DB_PASSWORD`, `ADEIN_DB_NAME` cargadas desde `ADEIN_DB_ENV_FILE`.
+- Si falta alguna variable `ADEIN_DB_*` requerida, aborta con `ok:false` sin imprimir secretos.
 
 ### Nuevos campos de artifact
 - `actualCurrentRowCounts`

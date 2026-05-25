@@ -201,14 +201,31 @@ async function run() {
   payload.databaseConnectionAttempted = true;
   payload.controlledReadonlyChecks.dbReadConnectionAttempted = true;
 
+  const requiredAdeinDbEnvVars = [
+    'ADEIN_DB_HOST',
+    'ADEIN_DB_PORT',
+    'ADEIN_DB_USER',
+    'ADEIN_DB_PASSWORD',
+    'ADEIN_DB_NAME'
+  ];
+
+  const hasAllRequiredAdeinDbEnvVars = requiredAdeinDbEnvVars.every((key) => {
+    const value = process.env[key];
+    return typeof value === 'string' && value.trim().length > 0;
+  });
+
+  if (!hasAllRequiredAdeinDbEnvVars) {
+    fail(payload, 'Abort condition: missing required ADEIN_DB_* env vars');
+  }
+
   const { createConnection } = await import('mysql2/promise');
 
   const connection = await createConnection({
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT ? Number(process.env.DB_PORT) : undefined,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME || 'adein_crm'
+    host: process.env.ADEIN_DB_HOST,
+    port: Number(process.env.ADEIN_DB_PORT),
+    user: process.env.ADEIN_DB_USER,
+    password: process.env.ADEIN_DB_PASSWORD,
+    database: process.env.ADEIN_DB_NAME
   });
 
   const counts = {};

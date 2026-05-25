@@ -73,6 +73,18 @@ function main() {
   assert.ok(scriptContent.includes("mysql2/promise"));
   assert.ok(scriptContent.includes('SELECT COUNT(*) AS count FROM'));
 
+  assert.ok(scriptContent.includes('process.env.ADEIN_DB_HOST'));
+  assert.ok(scriptContent.includes('process.env.ADEIN_DB_PORT'));
+  assert.ok(scriptContent.includes('process.env.ADEIN_DB_USER'));
+  assert.ok(scriptContent.includes('process.env.ADEIN_DB_PASSWORD'));
+  assert.ok(scriptContent.includes('process.env.ADEIN_DB_NAME'));
+
+  assert.ok(!scriptContent.includes('process.env.DB_HOST'));
+  assert.ok(!scriptContent.includes('process.env.DB_PORT'));
+  assert.ok(!scriptContent.includes('process.env.DB_USER'));
+  assert.ok(!scriptContent.includes('process.env.DB_PASSWORD'));
+  assert.ok(!scriptContent.includes('process.env.DB_NAME'));
+
   const dangerousCases = [
     { ADEIN_DB_COMMIT: '1' },
     { ADEIN_DB_ALLOW_PERSISTENT_WRITE: '1' },
