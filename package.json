@@ -43,7 +43,9 @@
     "db:controlled-write:minimum-safe-commit-rehearsal": "node scripts/db-controlled-persistent-write-minimum-safe-commit-rehearsal.mjs",
     "db:controlled-write:minimum-safe-commit-rehearsal:self-check": "node scripts/db-controlled-persistent-write-minimum-safe-commit-rehearsal-self-check.mjs",
     "db:controlled-write:approval-evidence-pack": "node scripts/db-controlled-persistent-write-approval-evidence-pack.mjs",
-    "db:controlled-write:approval-evidence-pack:self-check": "node scripts/db-controlled-persistent-write-approval-evidence-pack-self-check.mjs"
+    "db:controlled-write:approval-evidence-pack:self-check": "node scripts/db-controlled-persistent-write-approval-evidence-pack-self-check.mjs",
+    "db:server-staging:preflight": "node scripts/db-server-staging-preflight.mjs",
+    "db:server-staging:preflight:self-check": "node scripts/db-server-staging-preflight-self-check.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
