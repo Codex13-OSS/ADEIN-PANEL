@@ -24,7 +24,7 @@ function out(payload, code = 0) {
 }
 
 function fail(payload, message, code = 1) {
-  out({ ...payload, ok: false, error: message, persistentWriteExecuted: false, commitExecuted: false }, code);
+  out({ ...payload, ok: false, error: message }, code);
 }
 
 function applyEnvFile(path) {
@@ -52,24 +52,14 @@ async function getColumns(conn, dbName, table) {
   return rows;
 }
 
-function chooseValues(columns, candidates) {
-  const chosen = {};
-  for (const c of columns) {
-    if (Object.prototype.hasOwnProperty.call(candidates, c.COLUMN_NAME)) {
-      chosen[c.COLUMN_NAME] = candidates[c.COLUMN_NAME];
-    }
-  }
-  return chosen;
+function getRequiredColumns(columns) {
+  return columns
+    .filter((c) => c.IS_NULLABLE === 'NO' && c.COLUMN_DEFAULT === null && !String(c.EXTRA || '').toLowerCase().includes('auto_increment'))
+    .map((c) => c.COLUMN_NAME);
 }
 
-function ensureRequiredSatisfied(table, columns, chosen) {
-  const missing = columns.filter((c) => {
-    const required = c.IS_NULLABLE === 'NO' && c.COLUMN_DEFAULT === null && !String(c.EXTRA || '').includes('auto_increment');
-    return required && !Object.prototype.hasOwnProperty.call(chosen, c.COLUMN_NAME);
-  }).map((c) => c.COLUMN_NAME);
-  if (missing.length > 0) {
-    throw new Error(`Schema mismatch on ${table}. Missing required columns: ${missing.join(', ')}`);
-  }
+function validateRequiredColumns(requiredColumns, providedColumns) {
+  return requiredColumns.filter((c) => !providedColumns.includes(c));
 }
 
 async function insertRow(conn, table, values) {
@@ -95,9 +85,9 @@ async function queryTokenMatchesInTable(conn, table, searchableColumns, token) {
     return { table, matchCount: 0, checkedColumns: [], skipped: true, reason: 'no_textual_candidate_columns' };
   }
 
-  const where = searchableColumns.map((c) => `\`${c}\` = ?`).join(' OR ');
+  const where = searchableColumns.map((c) => `\`${c}\` LIKE ?`).join(' OR ');
   const sql = `SELECT COUNT(*) AS count FROM \`${table}\` WHERE ${where}`;
-  const [rows] = await conn.query(sql, searchableColumns.map(() => token));
+  const [rows] = await conn.query(sql, searchableColumns.map(() => `%${token}%`));
   const matchCount = Number(rows?.[0]?.count ?? 0);
   return { table, matchCount, checkedColumns: searchableColumns, skipped: false, reason: null };
 }
@@ -114,31 +104,13 @@ function basePayload() {
     commitExecuted: false,
     databaseConnected: false,
     transactionOpened: false,
+    rollbackExecuted: false,
+    postCommitFailure: false,
     insertsExecuted: 0,
     plannedRows: 5,
     syntheticOnly: true,
     allowedTables: ALLOWED_TABLES,
-    expectedRowCountDelta: { properties: 1, lots: 1, clients: 1, contracts: 1, payment_schedule: 1 },
-    safetyEnvelope: { noDefaultDbConnection: true, noDefaultTransaction: true, noDefaultInsert: true, noDefaultCommit: true },
-    requiredGates: { ...REQUIRED_GATES, ADEIN_DB_ENV_FILE: '<path>', ADEIN_V060_BACKUP_EVIDENCE_FILE: '<path>', ADEIN_V060_EXPECTED_BACKUP_SHA256: '<sha256>' },
-    plannedSyntheticFixture: {
-      syntheticToken: 'ADEIN_SYNTHETIC_V060_2026_05_25',
-      property: 'PROPIEDAD SINTETICA V060 - NO REAL',
-      lot: 'LOTE SINTETICO V060 - NO REAL',
-      client: 'CLIENTE SINTETICO V060 - NO REAL',
-      contract: 'CONTRATO SINTETICO V060 - NO REAL',
-      email: 'cliente.sintetico.v060@example.invalid',
-      phone: '0000000000'
-    },
-    abortConditions: [
-      'missing gates',
-      'backup evidence missing or invalid sha256',
-      'required empty tables are not empty',
-      'synthetic token already exists',
-      'schema mismatch',
-      'insert failure',
-      'post-commit delta mismatch'
-    ]
+    expectedRowCountDelta: { properties: 1, lots: 1, clients: 1, contracts: 1, payment_schedule: 1 }
   };
 }
 
@@ -182,81 +154,112 @@ async function run() {
     database: process.env.ADEIN_DB_NAME
   });
   payload.databaseConnected = true;
-  payload.backupVerified = true;
-
-  const syntheticToken = 'ADEIN_SYNTHETIC_V060_2026_05_25';
-  const before = {};
-  for (const t of ALLOWED_TABLES) before[t] = await countRows(conn, t);
-  payload.rowCountsBefore = before;
-
-  if (process.env.ADEIN_V060_REQUIRE_EMPTY_ALLOWED_TABLES === '1') {
-    const nonZero = Object.entries(before).filter(([, c]) => c !== 0).map(([t]) => t);
-    if (nonZero.length > 0) fail(payload, `Tablas no vacías: ${nonZero.join(', ')}`);
-  }
-
-  const dbName = process.env.ADEIN_DB_NAME;
-  const tableColumns = {};
-  for (const table of ALLOWED_TABLES) {
-    tableColumns[table] = await getColumns(conn, dbName, table);
-  }
-
-  const matchesByTable = {};
-  let totalMatches = 0;
-  for (const table of ALLOWED_TABLES) {
-    const searchableColumns = resolveTokenSearchableColumns(tableColumns[table]);
-    const matchResult = await queryTokenMatchesInTable(conn, table, searchableColumns, syntheticToken);
-    matchesByTable[table] = matchResult;
-    totalMatches += matchResult.matchCount;
-  }
-
-  payload.existingSyntheticTokenCheck = {
-    checked: true,
-    syntheticToken,
-    matchesByTable,
-    totalMatches,
-    passed: totalMatches === 0
-  };
-
-  if (totalMatches > 0) {
-    payload.syntheticTokenAlreadyExists = true;
-    payload.existingTokenMatches = Object.fromEntries(ALLOWED_TABLES.map((table) => [table, matchesByTable[table].matchCount]));
-    payload.transactionOpened = false;
-    payload.insertsExecuted = 0;
-    payload.commitExecuted = false;
-    fail(payload, 'Synthetic token already exists in allowed tables');
-  }
 
   try {
+    const syntheticToken = 'ADEIN_SYNTHETIC_V060_2026_05_25';
+    const rawPayload = JSON.stringify({ synthetic: true, phase: 'v060', token: syntheticToken });
+    const before = {};
+    for (const t of ALLOWED_TABLES) before[t] = await countRows(conn, t);
+    payload.rowCountsBefore = before;
+
+    if (process.env.ADEIN_V060_REQUIRE_EMPTY_ALLOWED_TABLES === '1') {
+      const nonZero = Object.entries(before).filter(([, c]) => c !== 0).map(([t]) => t);
+      if (nonZero.length > 0) fail(payload, `Tablas no vacías: ${nonZero.join(', ')}`);
+    }
+
+    const dbName = process.env.ADEIN_DB_NAME;
+    const tableColumns = {};
+    for (const table of ALLOWED_TABLES) tableColumns[table] = await getColumns(conn, dbName, table);
+
+    const matchesByTable = {};
+    let totalMatches = 0;
+    for (const table of ALLOWED_TABLES) {
+      const searchableColumns = resolveTokenSearchableColumns(tableColumns[table]);
+      const matchResult = await queryTokenMatchesInTable(conn, table, searchableColumns, syntheticToken);
+      matchesByTable[table] = matchResult;
+      totalMatches += matchResult.matchCount;
+    }
+
+    payload.existingSyntheticTokenCheck = { checked: true, syntheticToken, matchesByTable, totalMatches, passed: totalMatches === 0 };
+    if (totalMatches > 0) {
+      payload.syntheticTokenAlreadyExists = true;
+      fail(payload, 'Synthetic token already exists in allowed tables');
+    }
+
+    const fixtureByTable = {
+      properties: {
+        name: `PROPIEDAD SINTETICA V060 - NO REAL - ${syntheticToken}`,
+        location: null,
+        raw_payload_json: rawPayload
+      },
+      lots: {
+        property_id: 0,
+        lot_code: 'LOTE-SINTETICO-V060-NO-REAL-ADEIN-SYNTHETIC',
+        total_price: null,
+        raw_payload_json: rawPayload
+      },
+      clients: {
+        full_name: `CLIENTE SINTETICO V060 - NO REAL - ${syntheticToken}`,
+        email: 'cliente.sintetico.v060@example.invalid',
+        notes: `TOKEN ${syntheticToken} - NO REAL`,
+        raw_payload_json: rawPayload
+      },
+      contracts: {
+        client_id: 0,
+        lot_id: 0,
+        contract_code: 'CONTRATO-SINTETICO-V060-NO-REAL-ADEIN-SYNTHETIC',
+        total_amount: null,
+        down_payment: null,
+        balance_amount: null,
+        raw_payload_json: rawPayload
+      },
+      payment_schedule: {
+        contract_id: 0,
+        installment_number: 1,
+        due_date: '2030-01-01',
+        expected_amount: 1,
+        notes: `TOKEN ${syntheticToken} - NO REAL`,
+        raw_payload_json: rawPayload
+      }
+    };
+
+    payload.requiredColumnsByTable = {};
+    payload.providedColumnsByTable = {};
+    payload.missingRequiredColumnsByTable = {};
+    payload.schemaValidationByTable = {};
+
+    for (const table of ALLOWED_TABLES) {
+      const requiredColumns = getRequiredColumns(tableColumns[table]);
+      const providedColumns = Object.keys(fixtureByTable[table]);
+      const missingRequiredColumns = validateRequiredColumns(requiredColumns, providedColumns);
+      payload.requiredColumnsByTable[table] = requiredColumns;
+      payload.providedColumnsByTable[table] = providedColumns;
+      payload.missingRequiredColumnsByTable[table] = missingRequiredColumns;
+      payload.schemaValidationByTable[table] = { passed: missingRequiredColumns.length === 0 };
+      if (missingRequiredColumns.length > 0) fail(payload, `Schema mismatch on ${table}. Missing required columns: ${missingRequiredColumns.join(', ')}`);
+    }
+
     await conn.beginTransaction();
     payload.transactionOpened = true;
 
-    const propCols = tableColumns.properties;
-    const lotCols = tableColumns.lots;
-    const clientCols = tableColumns.clients;
-    const contractCols = tableColumns.contracts;
-    const psCols = tableColumns.payment_schedule;
+    const propertyId = await insertRow(conn, 'properties', fixtureByTable.properties);
+    payload.insertsExecuted += 1;
 
-    const propValues = chooseValues(propCols, { name: 'PROPIEDAD SINTETICA V060 - NO REAL', title: 'PROPIEDAD SINTETICA V060 - NO REAL', description: `TOKEN ${syntheticToken}`, synthetic_token: syntheticToken, notes: `SINTETICO ${syntheticToken}` });
-    ensureRequiredSatisfied('properties', propCols, propValues);
-    const propertyId = await insertRow(conn, 'properties', propValues);
+    fixtureByTable.lots.property_id = propertyId;
+    const lotId = await insertRow(conn, 'lots', fixtureByTable.lots);
+    payload.insertsExecuted += 1;
 
-    const lotValues = chooseValues(lotCols, { name: 'LOTE SINTETICO V060 - NO REAL', description: `TOKEN ${syntheticToken}`, synthetic_token: syntheticToken, property_id: propertyId });
-    ensureRequiredSatisfied('lots', lotCols, lotValues);
-    const lotId = await insertRow(conn, 'lots', lotValues);
+    const clientId = await insertRow(conn, 'clients', fixtureByTable.clients);
+    payload.insertsExecuted += 1;
 
-    const clientValues = chooseValues(clientCols, { name: 'CLIENTE SINTETICO V060 - NO REAL', full_name: 'CLIENTE SINTETICO V060 - NO REAL', email: 'cliente.sintetico.v060@example.invalid', phone: '0000000000', synthetic_token: syntheticToken, notes: `SINTETICO ${syntheticToken}` });
-    ensureRequiredSatisfied('clients', clientCols, clientValues);
-    const clientId = await insertRow(conn, 'clients', clientValues);
+    fixtureByTable.contracts.client_id = clientId;
+    fixtureByTable.contracts.lot_id = lotId;
+    const contractId = await insertRow(conn, 'contracts', fixtureByTable.contracts);
+    payload.insertsExecuted += 1;
 
-    const contractValues = chooseValues(contractCols, { name: 'CONTRATO SINTETICO V060 - NO REAL', description: `TOKEN ${syntheticToken}`, synthetic_token: syntheticToken, property_id: propertyId, lot_id: lotId, client_id: clientId, amount: 1, total_amount: 1 });
-    ensureRequiredSatisfied('contracts', contractCols, contractValues);
-    const contractId = await insertRow(conn, 'contracts', contractValues);
-
-    const psValues = chooseValues(psCols, { description: `PAGO SINTETICO ${syntheticToken}`, synthetic_token: syntheticToken, contract_id: contractId, amount: 1, total: 1 });
-    ensureRequiredSatisfied('payment_schedule', psCols, psValues);
-    const paymentScheduleId = await insertRow(conn, 'payment_schedule', psValues);
-
-    payload.insertsExecuted = 5;
+    fixtureByTable.payment_schedule.contract_id = contractId;
+    const paymentScheduleId = await insertRow(conn, 'payment_schedule', fixtureByTable.payment_schedule);
+    payload.insertsExecuted += 1;
 
     await conn.commit();
     payload.commitAllowed = true;
@@ -269,16 +272,26 @@ async function run() {
     payload.rowCountDelta = Object.fromEntries(ALLOWED_TABLES.map((t) => [t, after[t] - before[t]]));
     const expected = payload.expectedRowCountDelta;
     const mismatch = ALLOWED_TABLES.filter((t) => payload.rowCountDelta[t] !== expected[t]);
-    if (mismatch.length > 0) fail(payload, `Delta inválido en: ${mismatch.join(', ')}`);
+    if (mismatch.length > 0) {
+      payload.postCommitFailure = true;
+      fail(payload, `Delta inválido en: ${mismatch.join(', ')}. Falla post-commit, requiere revisión manual.`);
+    }
 
     payload.rowCountsVerified = true;
     payload.syntheticToken = syntheticToken;
     payload.insertedIds = { propertyId, lotId, clientId, contractId, paymentScheduleId };
-    payload.forbiddenOperationsDetected = false;
     out(payload, 0);
   } catch (e) {
     if (payload.transactionOpened && !payload.commitExecuted) {
-      try { await conn.rollback(); } catch {}
+      try {
+        await conn.rollback();
+        payload.rollbackExecuted = true;
+      } catch {
+        payload.rollbackExecuted = false;
+      }
+    }
+    if (payload.commitExecuted) {
+      payload.postCommitFailure = true;
     }
     fail(payload, e instanceof Error ? e.message : 'Error desconocido');
   } finally {
