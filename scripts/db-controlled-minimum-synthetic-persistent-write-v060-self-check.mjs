@@ -44,4 +44,9 @@ if (!source.includes("process.env.ADEIN_V060_SYNTHETIC_PERSISTENT_WRITE !== '1'"
 
 if (!source.includes('await conn.commit()')) fail('No se detectó COMMIT controlado');
 
+if (!source.includes('existingSyntheticTokenCheck')) fail('No se detectó lógica existingSyntheticTokenCheck');
+const idxCheck = source.indexOf('existingSyntheticTokenCheck');
+const idxTx = source.indexOf('await conn.beginTransaction()');
+if (idxCheck < 0 || idxTx < 0 || idxCheck > idxTx) fail('La validación de token previo no ocurre antes de abrir transacción');
+
 process.stdout.write(`${JSON.stringify({ ok: true, phase: 'v060', mode: 'self_check', checksPassed: true }, null, 2)}\n`);

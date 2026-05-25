@@ -15,6 +15,8 @@ const REQUIRED_GATES = {
   ADEIN_V060_REQUIRE_EMPTY_ALLOWED_TABLES: '1'
 };
 const REQUIRED_DB_ENV = ['ADEIN_DB_HOST', 'ADEIN_DB_PORT', 'ADEIN_DB_USER', 'ADEIN_DB_PASSWORD', 'ADEIN_DB_NAME'];
+const TOKEN_TEXTUAL_CANDIDATE_COLUMNS = ['name', 'full_name', 'lot_code', 'contract_code', 'email', 'phone', 'notes', 'description', 'status', 'synthetic_token'];
+const TEXTUAL_TYPES = new Set(['char', 'varchar', 'tinytext', 'text', 'mediumtext', 'longtext']);
 
 function out(payload, code = 0) {
   process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
@@ -80,6 +82,24 @@ async function insertRow(conn, table, values) {
 async function countRows(conn, table) {
   const [rows] = await conn.query(`SELECT COUNT(*) AS count FROM \`${table}\``);
   return Number(rows?.[0]?.count ?? NaN);
+}
+
+function resolveTokenSearchableColumns(columns) {
+  const byName = columns.filter((c) => TOKEN_TEXTUAL_CANDIDATE_COLUMNS.includes(c.COLUMN_NAME));
+  const textual = byName.filter((c) => TEXTUAL_TYPES.has(String(c.DATA_TYPE || '').toLowerCase()));
+  return textual.map((c) => c.COLUMN_NAME);
+}
+
+async function queryTokenMatchesInTable(conn, table, searchableColumns, token) {
+  if (searchableColumns.length === 0) {
+    return { table, matchCount: 0, checkedColumns: [], skipped: true, reason: 'no_textual_candidate_columns' };
+  }
+
+  const where = searchableColumns.map((c) => `\`${c}\` = ?`).join(' OR ');
+  const sql = `SELECT COUNT(*) AS count FROM \`${table}\` WHERE ${where}`;
+  const [rows] = await conn.query(sql, searchableColumns.map(() => token));
+  const matchCount = Number(rows?.[0]?.count ?? 0);
+  return { table, matchCount, checkedColumns: searchableColumns, skipped: false, reason: null };
 }
 
 function basePayload() {
@@ -164,7 +184,7 @@ async function run() {
   payload.databaseConnected = true;
   payload.backupVerified = true;
 
-  const syntheticToken = `ADEIN_SYNTHETIC_V060_${new Date().toISOString().slice(0, 10).replace(/-/g, '_')}`;
+  const syntheticToken = 'ADEIN_SYNTHETIC_V060_2026_05_25';
   const before = {};
   for (const t of ALLOWED_TABLES) before[t] = await countRows(conn, t);
   payload.rowCountsBefore = before;
@@ -174,12 +194,47 @@ async function run() {
     if (nonZero.length > 0) fail(payload, `Tablas no vacías: ${nonZero.join(', ')}`);
   }
 
+  const dbName = process.env.ADEIN_DB_NAME;
+  const tableColumns = {};
+  for (const table of ALLOWED_TABLES) {
+    tableColumns[table] = await getColumns(conn, dbName, table);
+  }
+
+  const matchesByTable = {};
+  let totalMatches = 0;
+  for (const table of ALLOWED_TABLES) {
+    const searchableColumns = resolveTokenSearchableColumns(tableColumns[table]);
+    const matchResult = await queryTokenMatchesInTable(conn, table, searchableColumns, syntheticToken);
+    matchesByTable[table] = matchResult;
+    totalMatches += matchResult.matchCount;
+  }
+
+  payload.existingSyntheticTokenCheck = {
+    checked: true,
+    syntheticToken,
+    matchesByTable,
+    totalMatches,
+    passed: totalMatches === 0
+  };
+
+  if (totalMatches > 0) {
+    payload.syntheticTokenAlreadyExists = true;
+    payload.existingTokenMatches = Object.fromEntries(ALLOWED_TABLES.map((table) => [table, matchesByTable[table].matchCount]));
+    payload.transactionOpened = false;
+    payload.insertsExecuted = 0;
+    payload.commitExecuted = false;
+    fail(payload, 'Synthetic token already exists in allowed tables');
+  }
+
   try {
     await conn.beginTransaction();
     payload.transactionOpened = true;
 
-    const db = process.env.ADEIN_DB_NAME;
-    const [propCols, lotCols, clientCols, contractCols, psCols] = await Promise.all(ALLOWED_TABLES.map((t) => getColumns(conn, db, t)));
+    const propCols = tableColumns.properties;
+    const lotCols = tableColumns.lots;
+    const clientCols = tableColumns.clients;
+    const contractCols = tableColumns.contracts;
+    const psCols = tableColumns.payment_schedule;
 
     const propValues = chooseValues(propCols, { name: 'PROPIEDAD SINTETICA V060 - NO REAL', title: 'PROPIEDAD SINTETICA V060 - NO REAL', description: `TOKEN ${syntheticToken}`, synthetic_token: syntheticToken, notes: `SINTETICO ${syntheticToken}` });
     ensureRequiredSatisfied('properties', propCols, propValues);

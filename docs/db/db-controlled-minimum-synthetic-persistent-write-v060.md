@@ -53,6 +53,12 @@ ADEIN_V060_EXPECTED_BACKUP_SHA256=<sha256> \
 npm run db:controlled-minimum-synthetic-write:v060
 ```
 
+## Validación explícita de token sintético previo
+Antes de abrir transacción, el script busca el token fijo `ADEIN_SYNTHETIC_V060_2026_05_25` en las tablas permitidas (`properties`, `lots`, `clients`, `contracts`, `payment_schedule`) usando columnas textuales candidatas existentes en schema real.
+
+- Si hay match en cualquier tabla: aborta con `ok:false`, `syntheticTokenAlreadyExists:true`, `transactionOpened:false`, `insertsExecuted:0`, `commitExecuted:false`.
+- Si una tabla no tiene columnas textuales candidatas, se reporta como `skipped` con razón, sin fallar por ello.
+
 ## Abort conditions
 - Falta cualquier gate requerida.
 - No existe o no valida el backup evidence.
