@@ -201,30 +201,32 @@ async function run() {
   payload.databaseConnectionAttempted = true;
   payload.controlledReadonlyChecks.dbReadConnectionAttempted = true;
 
+  const { createConnection } = await import('mysql2/promise');
+
+  const connection = await createConnection({
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT ? Number(process.env.DB_PORT) : undefined,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME || 'adein_crm'
+  });
+
   const counts = {};
-  for (const table of expectedRowCountTables) {
-    const sql = `SELECT COUNT(*)::bigint::text AS count FROM ${table};`;
-    const query = spawnSync(
-      'psql',
-      ['-t', '-A', '-v', 'ON_ERROR_STOP=1', '-c', sql],
-      {
-        encoding: 'utf8',
-        env: {
-          ...process.env,
-          PGPASSWORD: process.env.DB_PASSWORD || process.env.PGPASSWORD || ''
-        }
+  try {
+    for (const table of expectedRowCountTables) {
+      const sql = 'SELECT COUNT(*) AS count FROM `'+table+'`';
+      const [rows] = await connection.query(sql);
+      const raw = rows?.[0]?.count;
+      const value = Number(raw);
+      if (!Number.isFinite(value)) {
+        fail(payload, `Abort condition: invalid row count for table ${table}`);
       }
-    );
-
-    if (query.status !== 0) {
-      fail(payload, `Abort condition: controlled read-only verification failed on ${table}`);
+      counts[table] = value;
     }
-
-    const value = Number((query.stdout || '').trim());
-    if (!Number.isFinite(value)) {
-      fail(payload, `Abort condition: invalid row count for table ${table}`);
-    }
-    counts[table] = value;
+  } catch (error) {
+    fail(payload, `Abort condition: controlled read-only verification failed (${error.message})`);
+  } finally {
+    await connection.end().catch(() => {});
   }
 
   payload.actualCurrentRowCounts = counts;

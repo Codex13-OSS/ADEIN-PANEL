@@ -68,6 +68,11 @@ function main() {
     assert.ok(scriptContent.includes(`'${tableName}'`), `Missing expected table literal: ${tableName}`);
   }
 
+  assert.ok(!scriptContent.includes('psql'));
+  assert.ok(!scriptContent.includes('COUNT(*)::bigint::text'));
+  assert.ok(scriptContent.includes("mysql2/promise"));
+  assert.ok(scriptContent.includes('SELECT COUNT(*) AS count FROM'));
+
   const dangerousCases = [
     { ADEIN_DB_COMMIT: '1' },
     { ADEIN_DB_ALLOW_PERSISTENT_WRITE: '1' },

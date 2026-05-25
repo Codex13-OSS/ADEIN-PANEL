@@ -93,13 +93,18 @@ Con:
 el script ahora:
 1. Carga el env file externo sin imprimir secretos.
 2. Verifica backup v054 (`exists:true` y `sha256Matches:true`).
-3. Intenta conexión de solo lectura a BD.
-4. Ejecuta únicamente `SELECT COUNT(*)` sobre:
+3. Intenta conexión de solo lectura a MariaDB (mysql2/promise).
+4. Ejecuta únicamente `SELECT COUNT(*) AS count FROM `<tablaPermitida>`` sobre:
    - `clients`
    - `properties`
    - `lots`
    - `contracts`
    - `payment_schedule`
+
+### Motor y compatibilidad
+- BD real objetivo: MariaDB (`adein_crm`).
+- Verificación read-only implementada con `mysql2/promise`.
+- No usa `psql` ni sintaxis PostgreSQL.
 
 ### Nuevos campos de artifact
 - `actualCurrentRowCounts`
