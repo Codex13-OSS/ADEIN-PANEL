@@ -44,7 +44,7 @@ export function createReadonlyApiServer() {
     try {
       if (req.url === '/health') return json(req, res, 200, baseHealth());
       if (req.url === '/') {
-        return json(req, res, 200, { ...baseHealth(), endpoints: ['GET /health', 'GET /', 'GET /api/db/health', 'GET /api/db/metrics', 'GET /api/db/snapshot'] });
+        return json(req, res, 200, { ...baseHealth(), endpoints: ['GET /health', 'GET /', 'GET /api/db/health', 'GET /api/db/metrics', 'GET /api/db/snapshot', 'GET /api/db/synthetic-dashboard'] });
       }
       if (req.url === '/api/db/health') {
         const { getDbHealthSnapshot } = await import('./lib/db-health.mjs');
@@ -57,6 +57,10 @@ export function createReadonlyApiServer() {
       if (req.url === '/api/db/snapshot') {
         const { getDbReadonlySnapshot } = await import('./lib/db-snapshot.mjs');
         return json(req, res, 200, await getDbReadonlySnapshot());
+      }
+      if (req.url === '/api/db/synthetic-dashboard') {
+        const { getDbReadonlySyntheticDashboard } = await import('./lib/db-snapshot.mjs');
+        return json(req, res, 200, await getDbReadonlySyntheticDashboard());
       }
       return json(req, res, 404, { ok: false, error: 'Not Found', mode: 'read_only', writesEnabled: false });
     } catch (error) {

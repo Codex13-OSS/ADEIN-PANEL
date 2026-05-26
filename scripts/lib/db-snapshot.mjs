@@ -18,6 +18,48 @@ function buildSummaryCard(label, value, extra = {}) {
   return { label, value, ...extra, status: value > 0 ? 'ok' : 'empty' };
 }
 
+const SYNTHETIC_TOKEN_V060 = 'ADEIN_SYNTHETIC_V060_2026_05_25';
+
+const SYNTHETIC_SEARCH_COLUMNS_BY_TABLE = {
+  properties: ['name', 'raw_payload_json'],
+  lots: ['lot_code', 'raw_payload_json'],
+  clients: ['full_name', 'email', 'notes', 'raw_payload_json'],
+  contracts: ['contract_code', 'raw_payload_json'],
+  payment_schedule: ['notes', 'raw_payload_json']
+};
+
+async function getExistingColumns(connection, databaseName, table, candidateColumns) {
+  const placeholders = candidateColumns.map(() => '?').join(', ');
+  const [rows] = await connection.query(
+    `SELECT COLUMN_NAME
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME IN (${placeholders})`,
+    [databaseName, table, ...candidateColumns]
+  );
+  return new Set(rows.map((row) => String(row.COLUMN_NAME)));
+}
+
+function buildSyntheticWhereByColumns(existingColumns) {
+  const tokenLike = `%${SYNTHETIC_TOKEN_V060}%`;
+  const clauses = [];
+  const params = [];
+  for (const column of existingColumns) {
+    clauses.push(`COALESCE(${column}, '') LIKE ?`);
+    params.push(tokenLike);
+  }
+  return { whereClause: clauses.length > 0 ? `(${clauses.join(' OR ')})` : '(1 = 0)', params };
+}
+
+async function getSyntheticCount(connection, table, whereClause, params) {
+  const [rows] = await connection.query(`SELECT COUNT(*) AS total FROM ${table} WHERE ${whereClause}`, params);
+  return Number(rows[0]?.total ?? 0);
+}
+
+async function getSyntheticRow(connection, table, fields, whereClause, params) {
+  const [rows] = await connection.query(`SELECT ${fields.join(', ')} FROM ${table} WHERE ${whereClause} ORDER BY id ASC LIMIT 1`, params);
+  return rows[0] ?? null;
+}
+
 export async function getDbReadonlySnapshot() {
   const config = loadDbConfig();
   const connection = await createDbConnection(config);
@@ -94,6 +136,54 @@ export async function getDbReadonlySnapshot() {
       },
       warnings,
       notes: ['Snapshot read-only. No escribe en BD.', 'Datos pueden aparecer en cero si aún no se cargó información real.']
+    };
+  } finally {
+    await connection.end();
+  }
+}
+
+export async function getDbReadonlySyntheticDashboard() {
+  const config = loadDbConfig();
+  const connection = await createDbConnection(config);
+  try {
+    const [databaseRows] = await connection.query('SELECT DATABASE() AS active_database');
+    const activeDatabase = databaseRows[0]?.active_database ?? null;
+
+    const tableFilters = {};
+    for (const [table, columns] of Object.entries(SYNTHETIC_SEARCH_COLUMNS_BY_TABLE)) {
+      const existingColumns = await getExistingColumns(connection, config.database, table, columns);
+      tableFilters[table] = buildSyntheticWhereByColumns(columns.filter((column) => existingColumns.has(column)));
+    }
+
+    const property = await getSyntheticRow(connection, 'properties', ['id', 'name', 'status'], tableFilters.properties.whereClause, tableFilters.properties.params);
+    const lot = await getSyntheticRow(connection, 'lots', ['id', 'property_id', 'lot_code', 'status'], tableFilters.lots.whereClause, tableFilters.lots.params);
+    const client = await getSyntheticRow(connection, 'clients', ['id', 'full_name', 'status'], tableFilters.clients.whereClause, tableFilters.clients.params);
+    const contract = await getSyntheticRow(connection, 'contracts', ['id', 'client_id', 'lot_id', 'contract_code', 'contract_status'], tableFilters.contracts.whereClause, tableFilters.contracts.params);
+    const paymentSchedule = await getSyntheticRow(connection, 'payment_schedule', ['id', 'contract_id', 'installment_number', 'due_date', 'expected_amount', 'payment_status'], tableFilters.payment_schedule.whereClause, tableFilters.payment_schedule.params);
+
+    const counts = {
+      properties: await getSyntheticCount(connection, 'properties', tableFilters.properties.whereClause, tableFilters.properties.params),
+      lots: await getSyntheticCount(connection, 'lots', tableFilters.lots.whereClause, tableFilters.lots.params),
+      clients: await getSyntheticCount(connection, 'clients', tableFilters.clients.whereClause, tableFilters.clients.params),
+      contracts: await getSyntheticCount(connection, 'contracts', tableFilters.contracts.whereClause, tableFilters.contracts.params),
+      payment_schedule: await getSyntheticCount(connection, 'payment_schedule', tableFilters.payment_schedule.whereClause, tableFilters.payment_schedule.params)
+    };
+
+    const hasSyntheticRows = Object.values(counts).some((value) => value > 0);
+
+    return {
+      ok: activeDatabase === config.database && hasSyntheticRows,
+      mode: 'read_only_synthetic_dashboard',
+      writesEnabled: false,
+      database: activeDatabase,
+      syntheticOnly: true,
+      syntheticToken: SYNTHETIC_TOKEN_V060,
+      generatedAt: new Date().toISOString(),
+      counts,
+      relationship: { property, lot, client, contract, paymentSchedule },
+      warnings: hasSyntheticRows
+        ? ['Datos sintéticos de staging', 'No usar como datos reales de cliente']
+        : ['Datos sintéticos de staging', 'No usar como datos reales de cliente', `No se encontraron filas con token ${SYNTHETIC_TOKEN_V060} en las tablas objetivo`]
     };
   } finally {
     await connection.end();
