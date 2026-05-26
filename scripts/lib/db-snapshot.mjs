@@ -18,6 +18,42 @@ function buildSummaryCard(label, value, extra = {}) {
   return { label, value, ...extra, status: value > 0 ? 'ok' : 'empty' };
 }
 
+const SYNTHETIC_TOKEN_V060 = 'ADEIN_SYNTHETIC_V060_2026_05_25';
+
+function buildSyntheticWhereClause() {
+  return `(
+    COALESCE(synthetic_token, '') = ?
+    OR COALESCE(raw_payload_json, '') LIKE ?
+    OR COALESCE(notes, '') LIKE ?
+    OR COALESCE(name, '') LIKE ?
+    OR COALESCE(full_name, '') LIKE ?
+    OR COALESCE(contract_code, '') LIKE ?
+    OR COALESCE(lot_code, '') LIKE ?
+  )`;
+}
+
+function syntheticParams() {
+  return [
+    SYNTHETIC_TOKEN_V060,
+    `%${SYNTHETIC_TOKEN_V060}%`,
+    `%${SYNTHETIC_TOKEN_V060}%`,
+    `%${SYNTHETIC_TOKEN_V060}%`,
+    `%${SYNTHETIC_TOKEN_V060}%`,
+    `%${SYNTHETIC_TOKEN_V060}%`,
+    `%${SYNTHETIC_TOKEN_V060}%`
+  ];
+}
+
+async function getSyntheticCount(connection, table) {
+  const [rows] = await connection.query(`SELECT COUNT(*) AS total FROM ${table} WHERE ${buildSyntheticWhereClause()}`, syntheticParams());
+  return Number(rows[0]?.total ?? 0);
+}
+
+async function getSyntheticRow(connection, table, fields) {
+  const [rows] = await connection.query(`SELECT ${fields.join(', ')} FROM ${table} WHERE ${buildSyntheticWhereClause()} ORDER BY id ASC LIMIT 1`, syntheticParams());
+  return rows[0] ?? null;
+}
+
 export async function getDbReadonlySnapshot() {
   const config = loadDbConfig();
   const connection = await createDbConnection(config);
@@ -94,6 +130,42 @@ export async function getDbReadonlySnapshot() {
       },
       warnings,
       notes: ['Snapshot read-only. No escribe en BD.', 'Datos pueden aparecer en cero si aún no se cargó información real.']
+    };
+  } finally {
+    await connection.end();
+  }
+}
+
+export async function getDbReadonlySyntheticDashboard() {
+  const config = loadDbConfig();
+  const connection = await createDbConnection(config);
+  try {
+    const [databaseRows] = await connection.query('SELECT DATABASE() AS active_database');
+    const activeDatabase = databaseRows[0]?.active_database ?? null;
+
+    const property = await getSyntheticRow(connection, 'properties', ['id', 'name', 'status']);
+    const lot = await getSyntheticRow(connection, 'lots', ['id', 'property_id', 'lot_code', 'status']);
+    const client = await getSyntheticRow(connection, 'clients', ['id', 'full_name', 'status']);
+    const contract = await getSyntheticRow(connection, 'contracts', ['id', 'client_id', 'lot_id', 'contract_code', 'contract_status']);
+    const paymentSchedule = await getSyntheticRow(connection, 'payment_schedule', ['id', 'contract_id', 'installment_number', 'due_date', 'expected_amount', 'payment_status']);
+
+    return {
+      ok: activeDatabase === config.database,
+      mode: 'read_only_synthetic_dashboard',
+      writesEnabled: false,
+      database: activeDatabase,
+      syntheticOnly: true,
+      syntheticToken: SYNTHETIC_TOKEN_V060,
+      generatedAt: new Date().toISOString(),
+      counts: {
+        properties: await getSyntheticCount(connection, 'properties'),
+        lots: await getSyntheticCount(connection, 'lots'),
+        clients: await getSyntheticCount(connection, 'clients'),
+        contracts: await getSyntheticCount(connection, 'contracts'),
+        payment_schedule: await getSyntheticCount(connection, 'payment_schedule')
+      },
+      relationship: { property, lot, client, contract, paymentSchedule },
+      warnings: ['Datos sintéticos de staging', 'No usar como datos reales de cliente']
     };
   } finally {
     await connection.end();
