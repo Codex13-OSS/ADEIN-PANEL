@@ -1,0 +1,19 @@
+{
+  "external_ref": "demo-v063-prospect-001",
+  "source_ref": "wa-txt-demo-v063-001",
+  "source": "whatsapp_txt",
+  "environment": "staging",
+  "is_test": true,
+  "is_demo": true,
+  "review_status": "pending",
+  "name": "Demo Prospecto V063",
+  "phone_original": "+52 55 0000 0001",
+  "property_interest": "Lote demo etapa 1",
+  "status": "new",
+  "intention_level": "high",
+  "next_action": "Agendar llamada de validación demo",
+  "raw_payload": {
+    "channel": "whatsapp_txt",
+    "message": "Hola, me interesa un lote demo."
+  }
+}
