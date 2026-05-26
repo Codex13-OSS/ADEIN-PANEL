@@ -7,7 +7,19 @@ const payload = {
   ok: true, phase: PHASE, mode: MODE, dryRun: true, databaseConnectionAttempted: false, transactionStarted: false, rollbackDeleteExecuted: false,
   syntheticOnly: true, productionTouched: false,
   requiredRollbackGates: ['ADEIN_CRM_PROSPECT_STAGING_SYNTHETIC_ROLLBACK_V067=1', 'ADEIN_DB_ENV_FILE=<path>', 'ADEIN_DB_TARGET=staging', 'ADEIN_DB_ROLLBACK_GATE=ROLLBACK_SYNTHETIC_TOKEN_V067', 'ADEIN_DB_ROLLBACK_TOKEN=<token>'],
-  rollbackPlanByToken: { token: process.env.ADEIN_DB_ROLLBACK_TOKEN || '<token-required-for-controlled-mode>', safeDeleteSequence: DELETE_SEQUENCE, constraints: ['staging_only', 'synthetic_token_only', 'no_production'] }
+  rollbackPlanByToken: {
+    token: process.env.ADEIN_DB_ROLLBACK_TOKEN || '<token-required-for-controlled-mode>',
+    safeDeleteSequence: DELETE_SEQUENCE,
+    whereByTable: {
+      crm_history_events: 'external_ref/source_ref/event_type',
+      prospect_followups: 'external_ref/source_ref',
+      whatsapp_analyses: 'external_ref/source_ref',
+      whatsapp_conversations: 'external_ref/source_ref',
+      prospects: 'external_ref/source_ref',
+      lead_sources: 'source_code/source_ref'
+    },
+    constraints: ['staging_only', 'synthetic_token_only', 'no_production']
+  }
 };
 
 const wantsRollback = process.env.ADEIN_CRM_PROSPECT_STAGING_SYNTHETIC_ROLLBACK_V067 === '1';

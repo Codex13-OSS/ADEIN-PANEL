@@ -19,5 +19,13 @@ if (readonlyNoGates.status !== 0 || ro.mode !== 'dry_run') fail('controlled_read
 const rb = spawnSync(process.execPath,[rollbackScript],{encoding:'utf8',env:{...process.env}}); if (rb.status !== 0) fail('rollback dry-run falló');
 let rp; try { rp = JSON.parse(rb.stdout); } catch { fail('rollback JSON inválido'); }
 if (rp.dryRun !== true || rp.databaseConnectionAttempted !== false) fail('rollback no cumple dry-run');
-const source = fs.readFileSync(mainScript, 'utf8'); if (/(INSERT|UPDATE|DELETE)\s+INTO\s+`?(clients|contracts|payment_schedule|lots)`?/i.test(source)) fail('Destino prohibido detectado');
+const source = fs.readFileSync(mainScript, 'utf8');
+const rollbackSource = fs.readFileSync(rollbackScript, 'utf8');
+for (const badCol of ['analysis_token', 'followup_token', 'event_token']) {
+  if (source.includes(badCol) || rollbackSource.includes(badCol)) fail(`Columna inexistente detectada: ${badCol}`);
+}
+for (const goodCol of ['external_ref', 'source_ref', 'source_code', 'event_type']) {
+  if (!source.includes(goodCol) && !rollbackSource.includes(goodCol)) fail(`No se encontró columna real requerida: ${goodCol}`);
+}
+if (/(INSERT|UPDATE|DELETE)\s+INTO\s+`?(clients|contracts|payment_schedule|lots)`?/i.test(source) || /(INSERT|UPDATE|DELETE)\s+FROM\s+`?(clients|contracts|payment_schedule|lots)`?/i.test(rollbackSource)) fail('Destino prohibido detectado');
 process.stdout.write(`${JSON.stringify({ ok: true, phase: PHASE, mode: 'self_check', checksPassed: true }, null, 2)}\n`);
