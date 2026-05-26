@@ -92,7 +92,8 @@
     "crm:whatsapp-txt:preview:self-check": "node scripts/crm-whatsapp-txt-simulated-import-preview-self-check-v077.mjs",
     "crm:whatsapp-source-dashboard:self-check": "node scripts/crm-whatsapp-source-dashboard-summary-self-check-v078.mjs",
     "crm:historical-sales-excel-preview:self-check": "node scripts/crm-historical-sales-excel-preview-self-check-v081.mjs",
-    "crm:historical-sales-xlsx-parser-dashboard:self-check": "node scripts/crm-historical-sales-xlsx-parser-dashboard-self-check-v082.mjs"
+    "crm:historical-sales-xlsx-parser-dashboard:self-check": "node scripts/crm-historical-sales-xlsx-parser-dashboard-self-check-v082.mjs",
+    "crm:historical-sales-sheet-selection:self-check": "node scripts/crm-historical-sales-sheet-selection-self-check-v083.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
