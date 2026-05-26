@@ -12,7 +12,7 @@ import { normalizeProspectStagingReadonlySnapshot, SAFE_STAGING_READONLY_FALLBAC
 
 type BridgeUiState = 'fallback_local' | 'api_snapshot_available';
 
-const READONLY_API_SNAPSHOT_ENDPOINT = String((globalThis as { __ADEIN_CRM_PROSPECT_STAGING_READONLY_SNAPSHOT_URL__?: string }).__ADEIN_CRM_PROSPECT_STAGING_READONLY_SNAPSHOT_URL__ ?? '').trim();
+const READONLY_API_SNAPSHOT_ENDPOINT = (import.meta.env.VITE_CRM_PROSPECT_STAGING_READONLY_SNAPSHOT_URL ?? '').trim();
 
 type Props = {
   prospects: Prospect[];
