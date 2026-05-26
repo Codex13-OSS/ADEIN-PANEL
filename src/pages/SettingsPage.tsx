@@ -22,6 +22,7 @@ import { EMPTY_SNAPSHOT_EXAMPLE, validateSnapshotInput } from '../lib/dbSnapshot
 import { DbDashboardSnapshot, SnapshotValidation } from '../types/dbSnapshot';
 import { useDbSnapshot } from '../context/DbSnapshotContext';
 import { DEFAULT_DB_READONLY_API_BASE_URL, fetchSnapshotFromReadonlyApi } from '../lib/dbReadonlyApiClient';
+import HistoricalSalesUploader from '../components/HistoricalSalesUploader';
 
 export default function SettingsPage() {
   const [input, setInput] = useState('');
@@ -207,6 +208,9 @@ export default function SettingsPage() {
 
   return (
     <div className="page-grid">
+      <SectionCard title="Histórico comercial desde Excel">
+        <HistoricalSalesUploader />
+      </SectionCard>
 
       {summaryReadError && (
         <SectionCard title="Staging local">
