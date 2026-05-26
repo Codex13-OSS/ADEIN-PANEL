@@ -64,15 +64,13 @@ function OwnerDashboardPage({ prospects, followups, recommendedActions, historic
         ].map(([label, value]) => <StatCard key={label} label={label} value={value} />)}
       </section>
 
-      <SectionCard title="Análisis de WhatsApp" subtitle="CRM > Analizar WhatsApp es la fuente de captura de conversaciones.">
-        <p className="muted">Los archivos .txt se cargan desde CRM &gt; Analizar WhatsApp.</p>
-        <p className="muted">Aquí verás el resumen de prospectos, conversaciones y seguimientos.</p>
+      <SectionCard title="Captación comercial" subtitle="Resumen de prospectos generados desde conversaciones comerciales.">
         <p className="muted"><strong>Último prospecto:</strong> {latestProspect ? `${latestProspect.name} · ${latestProspect.status}` : 'Sin prospectos nuevos todavía.'}</p>
         <p className="muted"><strong>Próximo seguimiento:</strong> {nextPendingFollowup ? `${nextPendingFollowup.prospectName} · ${nextPendingFollowup.suggestedTime}` : 'Sin seguimientos pendientes.'}</p>
         <button type="button" className="btn-primary" onClick={() => onOpenWhatsAppAnalysis?.()}>
-          Analizar conversaciones en CRM
+          Ir a CRM ventas
         </button>
-        {!onOpenWhatsAppAnalysis ? <p className="muted">Abre CRM ventas y entra a Analizar WhatsApp.</p> : null}
+        {!onOpenWhatsAppAnalysis ? <p className="muted">Abre CRM ventas para continuar el seguimiento comercial.</p> : null}
       </SectionCard>
 
       <SectionCard title="Centro de decisiones" subtitle="Alertas comerciales prioritarias">
@@ -85,7 +83,7 @@ function OwnerDashboardPage({ prospects, followups, recommendedActions, historic
       </SectionCard>
 
       <SectionCard title="Etapa actual" subtitle="Dashboard maestro como resumen ejecutivo.">
-        <p className="muted">El análisis detallado de conversaciones se realiza en CRM &gt; Analizar WhatsApp.</p>
+        <p className="muted">Este panel concentra el resumen ejecutivo del avance comercial.</p>
         <p className="muted"><strong>Estado de vista previa:</strong> {dataFeedUiState === 'live_preview_available' ? 'Vista previa de datos disponible' : 'Vista previa simulada activa'}</p>
         <p className="muted"><strong>Demo con datos simulados.</strong> No contiene datos reales todavía.</p>
       </SectionCard>
