@@ -65,7 +65,9 @@
     "db:controlled-minimum-synthetic-write:v060:self-check": "node scripts/db-controlled-minimum-synthetic-persistent-write-v060-self-check.mjs",
     "crm:whatsapp-pipeline:self-check": "node scripts/crm-whatsapp-pipeline-self-check.mjs",
     "crm:prospect-staging:dry-run": "node scripts/crm-prospect-staging-db-persistence-dry-run.mjs",
-    "crm:prospect-staging:self-check": "node scripts/crm-prospect-staging-db-persistence-self-check.mjs"
+    "crm:prospect-staging:self-check": "node scripts/crm-prospect-staging-db-persistence-self-check.mjs",
+    "crm:prospect-staging:schema-apply": "node scripts/crm-prospect-staging-schema-apply-v064.mjs",
+    "crm:prospect-staging:schema-apply:self-check": "node scripts/crm-prospect-staging-schema-apply-self-check-v064.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
