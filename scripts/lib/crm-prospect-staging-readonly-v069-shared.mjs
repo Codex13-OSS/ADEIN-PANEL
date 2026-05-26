@@ -9,8 +9,7 @@ export async function runControlledReadonlySnapshot({ phase = 'v069', mode = 'co
     env: {
       ...process.env,
       ADEIN_CRM_PROSPECT_STAGING_READONLY_DASHBOARD_V068: '1',
-      ADEIN_DB_READONLY_DASHBOARD: '1',
-      ADEIN_DB_TARGET: 'staging'
+      ADEIN_DB_READONLY_DASHBOARD: '1'
     }
   });
 

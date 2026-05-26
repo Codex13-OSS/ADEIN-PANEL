@@ -35,7 +35,13 @@ const clientSource = fs.readFileSync(clientFile, 'utf8');
 if (/\b(mysql|mysql2)\b/i.test(clientSource)) fail('Client no debe importar mysql/mysql2');
 if (/\b(import\.meta\.env|process\.env|password|token|secret|ADEIN_DB_)\b/i.test(clientSource)) fail('Client no debe leer env/credenciales');
 if (/\b(INSERT\s+INTO|UPDATE\s+[`\"\w]|DELETE\s+FROM|ALTER\s+TABLE|DROP\s+TABLE|TRUNCATE\s+TABLE|CREATE\s+TABLE|REPLACE\s+INTO)\b/i.test(mainSource)) fail('Keywords SQL peligrosas no permitidas en server mock/local');
-if (/ADEIN_DB_ENV_FILE/.test(mainSource)) fail('Server mock/local no debe leer ADEIN_DB_ENV_FILE por defecto');
+
+if (!/controlled_readonly_api_server/.test(mainSource)) fail('No se detecta modo controlled_readonly_api_server en server');
+for (const gateToken of ['ADEIN_CRM_PROSPECT_STAGING_READONLY_API_V069', 'ADEIN_DB_ENV_FILE', 'ADEIN_DB_TARGET', 'ADEIN_DB_READONLY_API']) {
+  if (!mainSource.includes(gateToken)) fail(`Falta gate controlado en server: ${gateToken}`);
+}
+if (!/ADEIN_DB_TARGET !== 'staging'/.test(mainSource)) fail('Server no bloquea target distinto de staging en controlled');
+if (!/Controlled mode incompleto/.test(mainSource)) fail('Server no aborta explícitamente cuando faltan gates controlled');
 if (/\/\b(api\/)?(write|commit|rollback|admin)\b/i.test(mainSource)) fail('Rutas write-like no permitidas detectadas');
 
 const { server, port } = await startReadonlyApiServer({ host: '127.0.0.1', port: 3095 });
