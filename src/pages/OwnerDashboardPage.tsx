@@ -51,6 +51,7 @@ function OwnerDashboardPage({ prospects, followups, recommendedActions, historic
 
       <SectionCard title={readonlyStaging.title} subtitle="Capa preparada para snapshot controlado sin conexión automática desde frontend.">
         <p className="muted"><strong>{readonlyStaging.statusLabel}</strong></p>
+        <p className="muted">Bridge read-only preparado (v069): endpoint HTTP controlado server-side, sin conexión directa navegador→MariaDB.</p>
         <p className="muted">Prospectos: {readonlyStaging.cards.totalProspects} · Conversaciones: {readonlyStaging.cards.totalConversations} · Análisis: {readonlyStaging.cards.totalAnalyses}</p>
         <p className="muted">Followups: {readonlyStaging.cards.totalFollowups} · Eventos: {readonlyStaging.cards.totalHistoryEvents} · Sintéticos detectados: {readonlyStaging.cards.syntheticRowsDetected}</p>
       </SectionCard>
