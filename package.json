@@ -79,7 +79,8 @@
     "crm:prospect-staging:readonly-dashboard:self-check": "node scripts/crm-prospect-staging-readonly-dashboard-self-check-v068.mjs",
     "crm:prospect-staging:readonly-api-bridge": "node scripts/crm-prospect-staging-readonly-api-bridge-v069.mjs",
     "crm:prospect-staging:readonly-api-bridge:self-check": "node scripts/crm-prospect-staging-readonly-api-bridge-self-check-v069.mjs",
-    "crm:prospect-staging:readonly-api-server": "node scripts/crm-prospect-staging-readonly-api-server-v069.mjs"
+    "crm:prospect-staging:readonly-api-server": "node scripts/crm-prospect-staging-readonly-api-server-v069.mjs",
+    "crm:prospect-staging:dashboard-api-consumption:self-check": "node scripts/crm-prospect-staging-dashboard-api-consumption-self-check-v070.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
