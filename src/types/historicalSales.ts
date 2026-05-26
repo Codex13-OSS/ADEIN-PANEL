@@ -15,6 +15,9 @@ export type HistoricalSalesSummary = {
   availableLots?: number;
   sourceQuality?: 'xlsx_parsed' | 'legacy_text_parse' | 'fallback';
   parsedSheetName?: string;
+  auxiliarySheetsUsed?: string[];
+  skippedSheets?: string[];
+  sheetSelectionReason?: string;
 };
 
 export type HistoricalSalesStore = {

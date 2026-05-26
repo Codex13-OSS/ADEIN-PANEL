@@ -33,6 +33,7 @@ export default function HistoricalSalesUploader() {
         <p className="muted"><strong>Archivo:</strong> {store.sourceFileName}</p>
         <p className="muted"><strong>Hojas detectadas:</strong> {store.workbookSheets.join(', ')}</p>
         <p className="muted"><strong>Hoja usada:</strong> {store.selectedSheet ?? 'N/A'}</p>
+        {store.summary.auxiliarySheetsUsed?.length ? <p className="muted"><strong>Hojas auxiliares:</strong> {store.summary.auxiliarySheetsUsed.join(', ')}</p> : null}
         <p className="muted"><strong>Columnas detectadas:</strong> {visibleColumns.join(', ') || 'N/A'}{hiddenCount > 0 ? ` (+${hiddenCount} columnas)` : ''}</p>
         <p className="muted"><strong>Base histórica:</strong> {store.summary.totalRows} · <strong>Clientes actuales:</strong> {store.summary.currentClients} · <strong>Con teléfono:</strong> {store.summary.clientsWithPhone} · <strong>Lotes libres:</strong> {store.summary.freeLots}</p>
         <button type="button" onClick={() => { clearHistoricalSalesStore(); setStore(null); }}>Limpiar histórico local</button>
