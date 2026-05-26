@@ -10,7 +10,7 @@ import { normalizeProspectStagingReadonlySnapshot, SAFE_STAGING_READONLY_FALLBAC
 
 
 
-type BridgeUiState = 'fallback_local' | 'api_snapshot_available';
+type DataFeedUiState = 'demo_local' | 'live_preview_available';
 
 const READONLY_API_SNAPSHOT_ENDPOINT = (import.meta.env.VITE_CRM_PROSPECT_STAGING_READONLY_SNAPSHOT_URL ?? '').trim();
 
@@ -24,7 +24,6 @@ type Props = {
 function OwnerDashboardPage({ prospects, followups, recommendedActions, historicalMetrics }: Props) {
   const localMetrics = deriveLocalPipelineMetrics(prospects, followups, []);
   const { appliedSnapshot } = useDbSnapshot();
-  const syntheticSnapshot = appliedSnapshot as (typeof appliedSnapshot & { syntheticToken?: string; counts?: Record<string, number>; relationship?: Record<string, unknown> }) | null;
   const readonlyFromAppliedSnapshot = useMemo(() => normalizeProspectStagingReadonlySnapshot(appliedSnapshot), [appliedSnapshot]);
   const [readonlyFromApi, setReadonlyFromApi] = useState<StagingReadonlyViewModel | null>(null);
 
@@ -45,25 +44,22 @@ function OwnerDashboardPage({ prospects, followups, recommendedActions, historic
     };
   }, []);
 
-  const bridgeUiState: BridgeUiState = readonlyFromApi ? 'api_snapshot_available' : 'fallback_local';
-  const readonlyStaging = readonlyFromApi ?? readonlyFromAppliedSnapshot;
+  const dataFeedUiState: DataFeedUiState = readonlyFromApi ? 'live_preview_available' : 'demo_local';
+  const dashboardPreview = readonlyFromApi ?? readonlyFromAppliedSnapshot;
 
   return (
     <div className="page-grid">
-      <SectionCard title="CRM local activo" subtitle="Los prospectos guardados desde WhatsApp actualizan esta vista en localStorage.">
-        <p className="muted">Esta capa no escribe en BD real en v062. Sirve para operación comercial local/readiness.</p>
+      <SectionCard title="Panel comercial ADEIN" subtitle="Vista previa para seguimiento de prospectos y conversaciones de WhatsApp.">
+        <p className="muted"><strong>Demo con datos simulados.</strong> No contiene datos reales todavía.</p>
       </SectionCard>
 
       <section className="stats-grid">
         {[
-          ['Prospectos activos (CRM local)', String(localMetrics.activeProspects)],
-          ['Prospectos alta intención (CRM local)', String(localMetrics.highIntentionProspects)],
-          ['Seguimientos pendientes (CRM local)', String(localMetrics.pendingFollowups)],
-          ['Seguimientos vencidos (CRM local)', String(localMetrics.overdueFollowups)],
-          ['Cobranza esperada mes (demo/histórico)', `$${historicalMetrics.expectedCollectionMonth.toLocaleString('es-MX')} MXN`],
-          ['Clientes atrasados (demo/histórico)', String(historicalMetrics.clientsOverdue)],
-          ['Lotes libres (demo/histórico)', String(historicalMetrics.lotsAvailable)],
-          ['Lotes vendidos (demo/histórico)', String(historicalMetrics.lotsSold)],
+          ['Prospectos nuevos', String(dashboardPreview.cards.totalProspects)],
+          ['Conversaciones cargadas', String(dashboardPreview.cards.totalConversations)],
+          ['Análisis listos', String(dashboardPreview.cards.totalAnalyses)],
+          ['Seguimientos pendientes', String(dashboardPreview.cards.totalFollowups)],
+          ['Actividad registrada', String(dashboardPreview.cards.totalHistoryEvents)],
         ].map(([label, value]) => <StatCard key={label} label={label} value={value} />)}
       </section>
 
@@ -71,41 +67,42 @@ function OwnerDashboardPage({ prospects, followups, recommendedActions, historic
         <div className="decision-grid">
           <DecisionCard level="risk" title="Alerta de mayor riesgo" description={historicalMetrics.highestRiskAlert ? `Contrato ${historicalMetrics.highestRiskAlert.contract_id} con ${historicalMetrics.highestRiskAlert.days_overdue} días de atraso.` : 'Sin alertas de riesgo alto.'} />
           <DecisionCard level="opportunity" title="Oportunidad de recuperación" description={`Recuperación estimada: ${historicalMetrics.recoveryOpportunity}% del caso crítico si se atiende hoy.`} />
-          <DecisionCard level="high" title="Prioridad alta" description={`${localMetrics.highIntentionProspects} prospectos con intención alta en CRM local.`} />
+          <DecisionCard level="high" title="Prioridad alta" description={`${localMetrics.highIntentionProspects} prospectos con intención alta para atención comercial.`} />
           <DecisionCard level="recommendation" title="Recomendación" description={recommendedActions[0]?.suggestedAction ?? 'Priorizar seguimiento comercial del día.'} />
         </div>
       </SectionCard>
 
 
 
-      <SectionCard title={readonlyStaging.title} subtitle="Capa preparada para snapshot controlado sin conexión automática desde frontend.">
-        <p className="muted"><strong>{readonlyStaging.statusLabel}</strong></p>
-        <p className="muted"><strong>Read-only API bridge:</strong> Preparado · Controlado · Sin escritura · Sin producción.</p>
-        <p className="muted"><strong>Estado de consumo:</strong> {bridgeUiState === 'api_snapshot_available' ? 'Snapshot API disponible' : 'Fallback local activo'}</p>
-        <p className="muted">Bridge read-only preparado (v069): endpoint HTTP controlado server-side, sin conexión directa navegador→MariaDB.</p>
-        <p className="muted">Prospectos: {readonlyStaging.cards.totalProspects} · Conversaciones: {readonlyStaging.cards.totalConversations} · Análisis: {readonlyStaging.cards.totalAnalyses}</p>
-        <p className="muted">Followups: {readonlyStaging.cards.totalFollowups} · Eventos: {readonlyStaging.cards.totalHistoryEvents} · Sintéticos detectados: {readonlyStaging.cards.syntheticRowsDetected}</p>
+      <SectionCard title="Etapa actual" subtitle="Demo comercial operativa para dueño y vendedor.">
+        <p className="muted">Esta versión usa datos simulados para validar el flujo antes de conectar conversaciones reales.</p>
+        <p className="muted">Próximo paso: cargar archivos .txt exportados de WhatsApp para llenar este panel automáticamente.</p>
+        <p className="muted"><strong>Estado de vista previa:</strong> {dataFeedUiState === 'live_preview_available' ? 'Vista previa de datos disponible' : 'Vista previa simulada activa'}</p>
+        <p className="muted"><strong>Demo con datos simulados.</strong> No contiene datos reales todavía.</p>
       </SectionCard>
 
-      <SectionCard title="Snapshot BD read-only" subtitle="Puente controlado desde Configuración">
-        {!appliedSnapshot ? (
-          <p className="muted">Sin snapshot aplicado. Genera npm run db:snapshot y aplícalo desde Configuración.</p>
-        ) : (
-          <>
-            <p className="muted">Snapshot aplicado manualmente. Es lectura controlada; no hay escritura MariaDB desde navegador.</p>
-            <p className="muted"><strong>database:</strong> {appliedSnapshot.database}</p>
-            <p className="muted"><strong>mode:</strong> {appliedSnapshot.mode}</p>
-            <p className="muted"><strong>writesEnabled:</strong> {String(appliedSnapshot.writesEnabled)}</p>
-            <p className="muted"><strong>generatedAt:</strong> {appliedSnapshot.generatedAt}</p>
-            {appliedSnapshot.mode === 'read_only_synthetic_dashboard' ? (
-              <>
-                <p className="muted"><strong>Estado:</strong> READ-ONLY / STAGING / SYNTHETIC</p>
-                <p className="muted"><strong>Datos sintéticos persistidos:</strong> NO REAL</p>
-                <p className="muted"><strong>Token:</strong> {syntheticSnapshot?.syntheticToken ?? 'n/a'}</p>
-              </>
-            ) : null}
-          </>
-        )}
+      <SectionCard title="Qué podrá ver el vendedor" subtitle="Operación diaria orientada a cierre.">
+        <ul className="muted">
+          <li>Prospectos que llegaron por WhatsApp.</li>
+          <li>Qué cliente necesita seguimiento.</li>
+          <li>Qué conversación está caliente o fría (simulación de análisis).</li>
+          <li>Próxima acción recomendada para avanzar el cierre.</li>
+        </ul>
+      </SectionCard>
+
+      <SectionCard title="Qué podrá ver el dueño" subtitle="Visión comercial consolidada.">
+        <ul className="muted">
+          <li>Cuántos prospectos llegaron en el periodo.</li>
+          <li>Cuántas conversaciones se atendieron.</li>
+          <li>Cuántos seguimientos están pendientes.</li>
+          <li>Actividad comercial reciente del equipo.</li>
+          <li>Preparación para campaña Facebook/WhatsApp.</li>
+        </ul>
+      </SectionCard>
+
+      <SectionCard title="Carga de conversaciones .txt" subtitle="Próximamente">
+        <p className="muted">Próximamente: subir exportaciones de WhatsApp para convertirlas en prospectos del CRM.</p>
+        <p className="muted">Estado actual: listo para probar archivos de WhatsApp en siguiente fase.</p>
       </SectionCard>
     </div>
   );
