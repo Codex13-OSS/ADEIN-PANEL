@@ -7,8 +7,8 @@ import { useDbSnapshot } from '../context/DbSnapshotContext';
 import { deriveLocalPipelineMetrics } from '../lib/crmPipelineLocal';
 import { fetchProspectStagingReadonlySnapshot } from '../lib/crmProspectStagingReadonlyApiClient';
 import { normalizeProspectStagingReadonlySnapshot, SAFE_STAGING_READONLY_FALLBACK, type StagingReadonlyViewModel } from '../lib/crmProspectStagingReadonlySnapshot';
-
-
+import { WHATSAPP_TXT_DEMO_V077 } from '../fixtures/whatsappTxtDemoV077';
+import { parseWhatsappTxtPreview, type WhatsappTxtPreviewResult } from '../lib/whatsappTxtPreviewParser';
 
 type DataFeedUiState = 'demo_local' | 'live_preview_available';
 
@@ -26,6 +26,7 @@ function OwnerDashboardPage({ prospects, followups, recommendedActions, historic
   const { appliedSnapshot } = useDbSnapshot();
   const readonlyFromAppliedSnapshot = useMemo(() => normalizeProspectStagingReadonlySnapshot(appliedSnapshot), [appliedSnapshot]);
   const [readonlyFromApi, setReadonlyFromApi] = useState<StagingReadonlyViewModel | null>(null);
+  const [whatsappPreview, setWhatsappPreview] = useState<WhatsappTxtPreviewResult | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -100,9 +101,34 @@ function OwnerDashboardPage({ prospects, followups, recommendedActions, historic
         </ul>
       </SectionCard>
 
-      <SectionCard title="Carga de conversaciones .txt" subtitle="Próximamente">
-        <p className="muted">Próximamente: subir exportaciones de WhatsApp para convertirlas en prospectos del CRM.</p>
-        <p className="muted">Estado actual: listo para probar archivos de WhatsApp en siguiente fase.</p>
+      <SectionCard title="Carga de conversaciones .txt" subtitle="Demo local segura">
+        <p className="muted">Prueba controlada para simular una carga de conversación de WhatsApp en formato .txt.</p>
+        <button type="button" onClick={() => setWhatsappPreview(parseWhatsappTxtPreview(WHATSAPP_TXT_DEMO_V077))}>
+          Probar .txt simulado
+        </button>
+        {!whatsappPreview ? (
+          <p className="muted">Aún no se ejecuta la vista previa. Este botón usa únicamente una conversación sintética local.</p>
+        ) : (
+          <div className="muted">
+            <p><strong>Vista previa con conversación simulada.</strong></p>
+            <p><strong>No se subió ningún archivo real.</strong></p>
+            <p><strong>No se guardaron datos reales.</strong></p>
+            <p>Mensajes analizados: {whatsappPreview.messagesCount}</p>
+            <p>Participantes detectados: {whatsappPreview.participants.join(', ')}</p>
+            {whatsappPreview.previewProspects.map((prospect) => (
+              <div key={prospect.name}>
+                <p><strong>Prospecto detectado:</strong> {prospect.name}</p>
+                <p><strong>Interés:</strong> {prospect.interest}</p>
+                <p><strong>Temperatura simulada:</strong> {prospect.temperature}</p>
+                <p><strong>Próxima acción sugerida:</strong> {prospect.nextAction}</p>
+              </div>
+            ))}
+            <p><strong>Siguientes acciones recomendadas:</strong></p>
+            <ul>
+              {whatsappPreview.suggestedFollowups.map((item) => <li key={item}>{item}</li>)}
+            </ul>
+          </div>
+        )}
       </SectionCard>
     </div>
   );
