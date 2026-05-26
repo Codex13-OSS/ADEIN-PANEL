@@ -4,6 +4,7 @@ import StatCard from '../components/StatCard';
 import { Followup, Prospect, RecommendedAction } from '../types/crm';
 import { useDbSnapshot } from '../context/DbSnapshotContext';
 import { deriveLocalPipelineMetrics } from '../lib/crmPipelineLocal';
+import { normalizeProspectStagingReadonlySnapshot } from '../lib/crmProspectStagingReadonlySnapshot';
 
 type Props = {
   prospects: Prospect[];
@@ -16,6 +17,7 @@ function OwnerDashboardPage({ prospects, followups, recommendedActions, historic
   const localMetrics = deriveLocalPipelineMetrics(prospects, followups, []);
   const { appliedSnapshot } = useDbSnapshot();
   const syntheticSnapshot = appliedSnapshot as (typeof appliedSnapshot & { syntheticToken?: string; counts?: Record<string, number>; relationship?: Record<string, unknown> }) | null;
+  const readonlyStaging = normalizeProspectStagingReadonlySnapshot(appliedSnapshot);
 
   return (
     <div className="page-grid">
@@ -43,6 +45,14 @@ function OwnerDashboardPage({ prospects, followups, recommendedActions, historic
           <DecisionCard level="high" title="Prioridad alta" description={`${localMetrics.highIntentionProspects} prospectos con intención alta en CRM local.`} />
           <DecisionCard level="recommendation" title="Recomendación" description={recommendedActions[0]?.suggestedAction ?? 'Priorizar seguimiento comercial del día.'} />
         </div>
+      </SectionCard>
+
+
+
+      <SectionCard title={readonlyStaging.title} subtitle="Capa preparada para snapshot controlado sin conexión automática desde frontend.">
+        <p className="muted"><strong>{readonlyStaging.statusLabel}</strong></p>
+        <p className="muted">Prospectos: {readonlyStaging.cards.totalProspects} · Conversaciones: {readonlyStaging.cards.totalConversations} · Análisis: {readonlyStaging.cards.totalAnalyses}</p>
+        <p className="muted">Followups: {readonlyStaging.cards.totalFollowups} · Eventos: {readonlyStaging.cards.totalHistoryEvents} · Sintéticos detectados: {readonlyStaging.cards.syntheticRowsDetected}</p>
       </SectionCard>
 
       <SectionCard title="Snapshot BD read-only" subtitle="Puente controlado desde Configuración">

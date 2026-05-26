@@ -74,7 +74,9 @@
     "crm:prospect-staging:persistent-write-approval:self-check": "node scripts/crm-prospect-staging-synthetic-persistent-write-approval-self-check-v066.mjs",
     "crm:prospect-staging:synthetic-persistent-write": "node scripts/crm-prospect-staging-synthetic-persistent-write-v067.mjs",
     "crm:prospect-staging:synthetic-persistent-write:self-check": "node scripts/crm-prospect-staging-synthetic-persistent-write-self-check-v067.mjs",
-    "crm:prospect-staging:synthetic-persistent-write:rollback": "node scripts/crm-prospect-staging-synthetic-persistent-write-rollback-v067.mjs"
+    "crm:prospect-staging:synthetic-persistent-write:rollback": "node scripts/crm-prospect-staging-synthetic-persistent-write-rollback-v067.mjs",
+    "crm:prospect-staging:readonly-dashboard": "node scripts/crm-prospect-staging-readonly-dashboard-v068.mjs",
+    "crm:prospect-staging:readonly-dashboard:self-check": "node scripts/crm-prospect-staging-readonly-dashboard-self-check-v068.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
