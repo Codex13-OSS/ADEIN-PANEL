@@ -12,6 +12,7 @@ const PREFERRED_SHEETS = ['base limpia', 'clientes actuales', 'lotes libres', 'p
 const hasPhone = (v: unknown) => String(v ?? '').replace(/\D/g, '').length >= 8;
 const isFree = (s: string) => s.includes('libre');
 const isReserved = (s: string) => RESERVED_WORDS.some((w) => s.includes(w));
+const isDefinedString = (value: string | undefined): value is string => typeof value === 'string' && value.length > 0;
 
 const normalizeSheetName = (name: string) => low(name).replace(/\s+/g, ' ').trim();
 const getHeadersFromRecords = (records: Array<Record<string, unknown>>) => Object.keys(records[0] ?? {}).map((h) => normalize(h)).filter(Boolean);
@@ -22,7 +23,7 @@ const detectUsefulKeys = (headers: string[]) => {
     detectHeader(headers, ['predio', 'desarrollo', 'propiedad', 'lote']),
     detectHeader(headers, ['vendedor', 'asesor', 'responsable']),
     detectHeader(headers, ['estatus', 'status', 'estado', 'situacion', 'situación']),
-  ].filter(Boolean);
+  ].filter(isDefinedString);
   return Array.from(new Set(keys));
 };
 
