@@ -138,7 +138,7 @@ function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, follo
 
     if (currentTab === 'whatsapp') {
       return (
-        <SectionCard title="Analizar conversación de WhatsApp" subtitle="Sube el .txt exportado desde WhatsApp o pega la conversación para extraer datos comerciales.">
+        <SectionCard title="Analizar conversación de WhatsApp" subtitle="Fuente de captura de conversaciones: sube el .txt exportado o pega la conversación para convertirla en prospectos y seguimientos.">
           <label className="dropzone" htmlFor="whatsapp-file">
             <strong>Sube aquí el archivo .txt exportado desde WhatsApp</strong>
             <span>Formato permitido: .txt / text/plain</span>
