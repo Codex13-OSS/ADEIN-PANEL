@@ -84,7 +84,9 @@
     "crm:prospect-staging:same-origin-readonly-snapshot": "node scripts/crm-prospect-staging-same-origin-readonly-snapshot-server-v071.mjs",
     "crm:prospect-staging:same-origin-readonly-snapshot:self-check": "node scripts/crm-prospect-staging-same-origin-readonly-snapshot-self-check-v071.mjs",
     "crm:prospect-staging:same-origin-process-cleanup:rehearsal": "node scripts/crm-prospect-staging-same-origin-readonly-process-cleanup-rehearsal-v072.mjs",
-    "crm:prospect-staging:same-origin-process-cleanup:self-check": "node scripts/crm-prospect-staging-same-origin-readonly-process-cleanup-self-check-v072.mjs"
+    "crm:prospect-staging:same-origin-process-cleanup:self-check": "node scripts/crm-prospect-staging-same-origin-readonly-process-cleanup-self-check-v072.mjs",
+    "crm:prospect-staging:managed-same-origin-bridge:plan": "node scripts/crm-prospect-staging-managed-same-origin-bridge-plan-v073.mjs",
+    "crm:prospect-staging:managed-same-origin-bridge:self-check": "node scripts/crm-prospect-staging-managed-same-origin-bridge-self-check-v073.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
