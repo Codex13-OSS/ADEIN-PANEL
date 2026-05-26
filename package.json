@@ -88,7 +88,8 @@
     "crm:prospect-staging:managed-same-origin-bridge:plan": "node scripts/crm-prospect-staging-managed-same-origin-bridge-plan-v073.mjs",
     "crm:prospect-staging:managed-same-origin-bridge:self-check": "node scripts/crm-prospect-staging-managed-same-origin-bridge-self-check-v073.mjs",
     "crm:prospect-staging:managed-same-origin-activation": "node scripts/crm-prospect-staging-managed-same-origin-activation-v074.mjs",
-    "crm:prospect-staging:managed-same-origin-activation:self-check": "node scripts/crm-prospect-staging-managed-same-origin-activation-self-check-v074.mjs"
+    "crm:prospect-staging:managed-same-origin-activation:self-check": "node scripts/crm-prospect-staging-managed-same-origin-activation-self-check-v074.mjs",
+    "crm:whatsapp-txt:preview:self-check": "node scripts/crm-whatsapp-txt-simulated-import-preview-self-check-v077.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
