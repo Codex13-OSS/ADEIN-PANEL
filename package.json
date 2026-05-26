@@ -71,7 +71,10 @@
     "crm:prospect-staging:synthetic-write": "node scripts/crm-prospect-staging-synthetic-write-rehearsal-v065.mjs",
     "crm:prospect-staging:synthetic-write:self-check": "node scripts/crm-prospect-staging-synthetic-write-rehearsal-self-check-v065.mjs",
     "crm:prospect-staging:persistent-write-approval": "node scripts/crm-prospect-staging-synthetic-persistent-write-approval-v066.mjs",
-    "crm:prospect-staging:persistent-write-approval:self-check": "node scripts/crm-prospect-staging-synthetic-persistent-write-approval-self-check-v066.mjs"
+    "crm:prospect-staging:persistent-write-approval:self-check": "node scripts/crm-prospect-staging-synthetic-persistent-write-approval-self-check-v066.mjs",
+    "crm:prospect-staging:synthetic-persistent-write": "node scripts/crm-prospect-staging-synthetic-persistent-write-v067.mjs",
+    "crm:prospect-staging:synthetic-persistent-write:self-check": "node scripts/crm-prospect-staging-synthetic-persistent-write-self-check-v067.mjs",
+    "crm:prospect-staging:synthetic-persistent-write:rollback": "node scripts/crm-prospect-staging-synthetic-persistent-write-rollback-v067.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
