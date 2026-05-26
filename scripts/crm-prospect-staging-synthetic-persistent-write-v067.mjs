@@ -24,7 +24,7 @@ function buildPayload() {
     persistentWritePlan: TARGET_TABLES.map((table) => ({ table, inserts: 1 })),
     requiredCommitGates: ['ADEIN_CRM_PROSPECT_STAGING_SYNTHETIC_PERSISTENT_WRITE_V067=1', 'ADEIN_DB_ENV_FILE=<path>', 'ADEIN_DB_TARGET=staging', `ADEIN_DB_WRITE_GATE=${COMMIT_GATE}`, `ADEIN_DB_APPROVAL_TOKEN=${APPROVAL_TOKEN}`, 'ADEIN_DB_SYNTHETIC_ONLY=1', 'ADEIN_DB_PRODUCTION_TOUCHED=0'],
     requiredPreCommitChecks: ['6 tablas existen en staging', 'row counts baseline', 'forbidden destinations fuera de target', 'payload sintético relacional único por token'],
-    requiredPostCommitEvidence: ['+1 row count en cada tabla target', 'verificación por token en 6 tablas', 'insertedIds y token auditables'],
+    requiredPostCommitEvidence: ['+1 row count en cada tabla target', 'verificación por token en columnas reales de 6 tablas', 'insertedIds y token auditables'],
     rollbackPlanByToken: { strategy: 'manual_compensating_delete_by_token', token, sequence: ['crm_history_events', 'prospect_followups', 'whatsapp_analyses', 'whatsapp_conversations', 'prospects', 'lead_sources'] },
     safetyEnvelope: { defaultMode: MODE_DRY, maxWriteMode: MODE_COMMIT, blockedSignals: ['NODE_ENV=production', 'ADEIN_DB_TARGET=production', 'ADEIN_DB_ENV=production'] }
   };
@@ -63,28 +63,41 @@ async function main() {
       return process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
     }
 
-    if (process.env.ADEIN_DB_WRITE_GATE !== COMMIT_GATE || process.env.ADEIN_DB_APPROVAL_TOKEN !== APPROVAL_TOKEN || process.env.ADEIN_DB_SYNTHETIC_ONLY !== '1' || process.env.ADEIN_DB_PRODUCTION_TOUCHED !== '0') fail(payload, 'Gates de commit v067 inválidos');
     payload.mode = MODE_COMMIT; payload.dryRun = false;
     const token = payload.syntheticPayloadPreview.token;
-    await connection.beginTransaction(); payload.transactionStarted = true;
-    const [leadRes] = await connection.execute('INSERT INTO `lead_sources` (source_code, source_ref, environment, is_test, is_demo, review_status, raw_payload_json, normalized_payload_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [`demo_whatsapp_${token}`, `source_ref_${token}`, 'staging', 1, 1, 'pending', JSON.stringify({ token }), JSON.stringify({ token })]);
-    const [prospectRes] = await connection.execute('INSERT INTO `prospects` (external_ref, source_ref, source, environment, is_test, is_demo, review_status, lead_source_id, name, phone_original, phone_normalized, property_interest, status, intention_level, next_action, raw_payload_json, normalized_payload_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [`external_ref_${token}`, `source_ref_${token}`, 'demo', 'staging', 1, 1, 'pending', leadRes.insertId, `Demo Prospect ${token}`, '+52 55 1000 0000', '525510000000', `Lote demo ${token}`, 'new', 'high', `followup_${token}`, JSON.stringify({ token }), JSON.stringify({ token })]);
-    const [convRes] = await connection.execute('INSERT INTO `whatsapp_conversations` (external_ref, source_ref, prospect_id, source, environment, is_test, is_demo, review_status, phone_original, phone_normalized, raw_payload_json, normalized_payload_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [`conv_ext_${token}`, `source_ref_${token}`, prospectRes.insertId, 'demo', 'staging', 1, 1, 'pending', '+52 55 1000 0000', '525510000000', JSON.stringify({ token }), JSON.stringify({ token })]);
-    const [analysisRes] = await connection.execute('INSERT INTO `whatsapp_analyses` (external_ref, source_ref, prospect_id, conversation_id, source, environment, is_test, is_demo, review_status, intention_level, next_action, raw_payload_json, normalized_payload_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [`analysis_ext_${token}`, `source_ref_${token}`, prospectRes.insertId, convRes.insertId, 'demo', 'staging', 1, 1, 'pending', 'high', `followup_${token}`, JSON.stringify({ token }), JSON.stringify({ token })]);
-    const [followRes] = await connection.execute('INSERT INTO `prospect_followups` (external_ref, source_ref, prospect_id, source, environment, is_test, is_demo, review_status, status, next_action, raw_payload_json, normalized_payload_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [`follow_ext_${token}`, `source_ref_${token}`, prospectRes.insertId, 'demo', 'staging', 1, 1, 'pending', 'pending', `followup_${token}`, JSON.stringify({ token }), JSON.stringify({ token })]);
-    const [historyRes] = await connection.execute('INSERT INTO `crm_history_events` (external_ref, source_ref, prospect_id, followup_id, conversation_id, analysis_id, source, environment, is_test, is_demo, review_status, event_type, status, intention_level, next_action, raw_payload_json, normalized_payload_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [`history_ext_${token}`, `source_ref_${token}`, prospectRes.insertId, followRes.insertId, convRes.insertId, analysisRes.insertId, 'demo', 'staging', 1, 1, 'pending', `prospect_staged_${token}`, 'new', 'high', `followup_${token}`, JSON.stringify({ token }), JSON.stringify({ token })]);
+    try {
+      await connection.beginTransaction(); payload.transactionStarted = true;
+      const [leadRes] = await connection.execute('INSERT INTO `lead_sources` (source_code, source_ref, environment, is_test, is_demo, review_status, raw_payload_json, normalized_payload_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [`demo_whatsapp_${token}`, `source_ref_${token}`, 'staging', 1, 1, 'pending', JSON.stringify({ token }), JSON.stringify({ token })]);
+      const [prospectRes] = await connection.execute('INSERT INTO `prospects` (external_ref, source_ref, source, environment, is_test, is_demo, review_status, lead_source_id, name, phone_original, phone_normalized, property_interest, status, intention_level, next_action, raw_payload_json, normalized_payload_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [`external_ref_${token}`, `source_ref_${token}`, 'demo', 'staging', 1, 1, 'pending', leadRes.insertId, `Demo Prospect ${token}`, '+52 55 1000 0000', '525510000000', `Lote demo ${token}`, 'new', 'high', `followup_${token}`, JSON.stringify({ token }), JSON.stringify({ token })]);
+      const [convRes] = await connection.execute('INSERT INTO `whatsapp_conversations` (external_ref, source_ref, prospect_id, source, environment, is_test, is_demo, review_status, phone_original, phone_normalized, raw_payload_json, normalized_payload_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [`external_ref_${token}`, `source_ref_${token}`, prospectRes.insertId, 'demo', 'staging', 1, 1, 'pending', '+52 55 1000 0000', '525510000000', JSON.stringify({ token }), JSON.stringify({ token })]);
+      const [analysisRes] = await connection.execute('INSERT INTO `whatsapp_analyses` (external_ref, source_ref, prospect_id, conversation_id, source, environment, is_test, is_demo, review_status, intention_level, next_action, raw_payload_json, normalized_payload_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [`external_ref_${token}`, `source_ref_${token}`, prospectRes.insertId, convRes.insertId, 'demo', 'staging', 1, 1, 'pending', 'high', `followup_${token}`, JSON.stringify({ token }), JSON.stringify({ token })]);
+      const [followRes] = await connection.execute('INSERT INTO `prospect_followups` (external_ref, source_ref, prospect_id, source, environment, is_test, is_demo, review_status, status, next_action, raw_payload_json, normalized_payload_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [`external_ref_${token}`, `source_ref_${token}`, prospectRes.insertId, 'demo', 'staging', 1, 1, 'pending', 'pending', `followup_${token}`, JSON.stringify({ token }), JSON.stringify({ token })]);
+      const [historyRes] = await connection.execute('INSERT INTO `crm_history_events` (external_ref, source_ref, prospect_id, followup_id, conversation_id, analysis_id, source, environment, is_test, is_demo, review_status, event_type, status, intention_level, next_action, raw_payload_json, normalized_payload_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [`external_ref_${token}`, `source_ref_${token}`, prospectRes.insertId, followRes.insertId, convRes.insertId, analysisRes.insertId, 'demo', 'staging', 1, 1, 'pending', `prospect_staged_${token}`, 'new', 'high', `followup_${token}`, JSON.stringify({ token }), JSON.stringify({ token })]);
 
-    const rowCountsInsideTransaction = {}; for (const t of TARGET_TABLES) { const [rows] = await connection.query(`SELECT COUNT(*) AS count FROM \`${t}\``); rowCountsInsideTransaction[t] = Number(rows?.[0]?.count ?? -1); }
-    for (const [table, marker] of [['lead_sources','source_code'],['prospects','external_ref'],['whatsapp_conversations','external_ref'],['whatsapp_analyses','external_ref'],['prospect_followups','external_ref'],['crm_history_events','event_type']]) {
-      const value = table === 'crm_history_events' ? `prospect_staged_${token}` : (table === 'lead_sources' ? `demo_whatsapp_${token}` : `${table.startsWith('prospect')?'external_ref':'external_ref'}_${token}`);
-      const [rows] = await connection.query(`SELECT COUNT(*) AS count FROM \`${table}\` WHERE \`${marker}\` = ?`, [value]); if (Number(rows?.[0]?.count ?? 0) !== 1) fail(payload, `Verificación relacional/token falló en ${table}`);
+      const rowCountsInsideTransaction = {}; for (const t of TARGET_TABLES) { const [rows] = await connection.query(`SELECT COUNT(*) AS count FROM \`${t}\``); rowCountsInsideTransaction[t] = Number(rows?.[0]?.count ?? -1); }
+      const verificationRules = [
+        { table: 'lead_sources', where: 'source_code = ? AND source_ref = ?', values: [`demo_whatsapp_${token}`, `source_ref_${token}`] },
+        { table: 'prospects', where: 'external_ref = ? AND source_ref = ?', values: [`external_ref_${token}`, `source_ref_${token}`] },
+        { table: 'whatsapp_conversations', where: 'external_ref = ? AND source_ref = ?', values: [`external_ref_${token}`, `source_ref_${token}`] },
+        { table: 'whatsapp_analyses', where: 'external_ref = ? AND source_ref = ?', values: [`external_ref_${token}`, `source_ref_${token}`] },
+        { table: 'prospect_followups', where: 'external_ref = ? AND source_ref = ?', values: [`external_ref_${token}`, `source_ref_${token}`] },
+        { table: 'crm_history_events', where: 'external_ref = ? AND source_ref = ? AND event_type = ?', values: [`external_ref_${token}`, `source_ref_${token}`, `prospect_staged_${token}`] }
+      ];
+      for (const rule of verificationRules) {
+        const [rows] = await connection.query(`SELECT COUNT(*) AS count FROM \`${rule.table}\` WHERE ${rule.where}`, rule.values);
+        if (Number(rows?.[0]?.count ?? 0) !== 1) fail(payload, `Verificación relacional/token falló en ${rule.table}`);
+      }
+
+      await connection.commit(); payload.commitExecuted = true; payload.persistentWriteExecuted = true;
+      const rowCountsAfterCommit = {}; for (const t of TARGET_TABLES) { const [rows] = await connection.query(`SELECT COUNT(*) AS count FROM \`${t}\``); rowCountsAfterCommit[t] = Number(rows?.[0]?.count ?? -1); }
+      const postCommitVerified = TARGET_TABLES.every((t) => rowCountsAfterCommit[t] === rowCountsBefore[t] + 1); if (!postCommitVerified) fail(payload, 'Row counts post-commit no subieron exactamente +1');
+
+      Object.assign(payload, { insertsAttempted: 6, rollbackExecuted: false, insertedIds: { lead_source_id: leadRes.insertId, prospect_id: prospectRes.insertId, conversation_id: convRes.insertId, analysis_id: analysisRes.insertId, followup_id: followRes.insertId, history_event_id: historyRes.insertId }, token, rowCountsBefore, rowCountsInsideTransaction, rowCountsAfterCommit, postCommitVerified });
+      process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+    } catch (error) {
+      if (payload.transactionStarted && !payload.commitExecuted) { await connection.rollback(); payload.rollbackExecuted = true; }
+      fail(payload, error?.message || String(error));
     }
-    await connection.commit(); payload.commitExecuted = true; payload.persistentWriteExecuted = true;
-    const rowCountsAfterCommit = {}; for (const t of TARGET_TABLES) { const [rows] = await connection.query(`SELECT COUNT(*) AS count FROM \`${t}\``); rowCountsAfterCommit[t] = Number(rows?.[0]?.count ?? -1); }
-    const postCommitVerified = TARGET_TABLES.every((t) => rowCountsAfterCommit[t] === rowCountsBefore[t] + 1); if (!postCommitVerified) fail(payload, 'Row counts post-commit no subieron exactamente +1');
-
-    Object.assign(payload, { insertsAttempted: 6, rollbackExecuted: false, insertedIds: { lead_source_id: leadRes.insertId, prospect_id: prospectRes.insertId, conversation_id: convRes.insertId, analysis_id: analysisRes.insertId, followup_id: followRes.insertId, history_event_id: historyRes.insertId }, token, rowCountsBefore, rowCountsInsideTransaction, rowCountsAfterCommit, postCommitVerified });
-    process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
   } finally { await connection.end(); }
 }
 
