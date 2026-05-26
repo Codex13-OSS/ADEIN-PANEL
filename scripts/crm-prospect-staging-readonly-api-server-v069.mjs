@@ -123,7 +123,15 @@ export async function startReadonlyApiServer({ host = process.env.ADEIN_API_BIND
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
-    const { host, port, runtimeMode } = await startReadonlyApiServer();
+    const { host, port, runtimeMode, server } = await startReadonlyApiServer();
+    const shutdown = (signal) => {
+      server.close(() => {
+        process.stdout.write(`${JSON.stringify({ ok: true, phase: PHASE, mode: runtimeMode, shutdown: true, signal, writeExecuted: false, commitExecuted: false, transactionStarted: false, productionTouched: false }, null, 2)}\n`);
+        process.exit(0);
+      });
+    };
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT', () => shutdown('SIGINT'));
     console.log(JSON.stringify({ ok: true, phase: PHASE, mode: runtimeMode, serverStarted: true, databaseConnectionAttempted: runtimeMode === MODE_CONTROLLED, readonly: true, writeExecuted: false, commitExecuted: false, transactionStarted: false, productionTouched: false, bindHost: host, port, routes: ROUTES }, null, 2));
   } catch (error) {
     console.error(JSON.stringify({ ok: false, phase: PHASE, aborted: true, error: error?.message || String(error) }, null, 2));
