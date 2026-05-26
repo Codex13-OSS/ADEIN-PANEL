@@ -50,11 +50,14 @@ function isActivationEnabled() {
 }
 
 function evaluateGates(config) {
+  const testMode = process.env.ADEIN_V072_TEST_MODE === '1';
+  const testUpstreamAllowed = testMode && /^http:\/\/127\.0\.0\.1:\d+\/api\/crm\/prospect-staging\/readonly-snapshot/.test(config.upstreamSnapshot);
   return {
     activationEnabled: isActivationEnabled(),
     targetIsStaging: process.env.ADEIN_DB_TARGET === 'staging',
     bindHostAllowed: config.bindHost === '127.0.0.1' || config.bindHost === '0.0.0.0',
-    upstreamIsLocalReadonlySnapshot: config.upstreamSnapshot.startsWith('http://127.0.0.1:3091/api/crm/prospect-staging/readonly-snapshot')
+    upstreamIsLocalReadonlySnapshot: config.upstreamSnapshot.startsWith('http://127.0.0.1:3091/api/crm/prospect-staging/readonly-snapshot'),
+    testUpstreamAllowed
   };
 }
 
@@ -157,7 +160,7 @@ export async function startSameOriginReadonlySnapshotServer({ host, port } = {})
   }
   if (!gates.targetIsStaging) throw new Error('ADEIN_DB_TARGET debe ser staging');
   if (!gates.bindHostAllowed) throw new Error('ADEIN_SAME_ORIGIN_BIND_HOST debe ser 127.0.0.1 o 0.0.0.0');
-  if (!gates.upstreamIsLocalReadonlySnapshot) throw new Error('ADEIN_UPSTREAM_READONLY_API debe apuntar al upstream local read-only 127.0.0.1:3091');
+  if (!gates.upstreamIsLocalReadonlySnapshot && !gates.testUpstreamAllowed) throw new Error('ADEIN_UPSTREAM_READONLY_API debe apuntar al upstream local read-only 127.0.0.1:3091 (o test mode v072 local)');
 
   const server = buildServer(config);
   await new Promise((resolveListen, rejectListen) => {
@@ -174,6 +177,16 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     const result = await startSameOriginReadonlySnapshotServer();
     const { server, ...safe } = result;
+    if (server) {
+      const shutdown = (signal) => {
+        server.close(() => {
+          process.stdout.write(`${JSON.stringify({ ok: true, phase: PHASE, mode: 'runtime', shutdown: true, signal, writeExecuted: false, commitExecuted: false, transactionStarted: false, productionTouched: false }, null, 2)}\n`);
+          process.exit(0);
+        });
+      };
+      process.on('SIGTERM', () => shutdown('SIGTERM'));
+      process.on('SIGINT', () => shutdown('SIGINT'));
+    }
     process.stdout.write(`${JSON.stringify(safe, null, 2)}\n`);
   } catch (error) {
     process.stderr.write(`${JSON.stringify({ ok: false, phase: PHASE, aborted: true, error: error?.message || String(error) }, null, 2)}\n`);
