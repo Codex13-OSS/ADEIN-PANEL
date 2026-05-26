@@ -7,7 +7,7 @@ import { useDbSnapshot } from '../context/DbSnapshotContext';
 import { deriveLocalPipelineMetrics } from '../lib/crmPipelineLocal';
 import { fetchProspectStagingReadonlySnapshot } from '../lib/crmProspectStagingReadonlyApiClient';
 import { normalizeProspectStagingReadonlySnapshot, SAFE_STAGING_READONLY_FALLBACK, type StagingReadonlyViewModel } from '../lib/crmProspectStagingReadonlySnapshot';
-import { getHistoricalSalesStore } from '../lib/historicalSalesStorage';
+import { detectLegacyBrokenHistoricalSalesStore, getHistoricalSalesStore } from '../lib/historicalSalesStorage';
 
 type DataFeedUiState = 'demo_local' | 'live_preview_available';
 
@@ -64,6 +64,7 @@ function OwnerDashboardPage({ prospects, followups, historyEventsCount = 0, reco
   const latestProspect = prospects[prospects.length - 1] ?? null;
   const nextPendingFollowup = followups.find((item) => !item.completed) ?? null;
   const historicalSales = useMemo(() => getHistoricalSalesStore(), []);
+  const brokenLegacyHistorical = detectLegacyBrokenHistoricalSalesStore(historicalSales);
 
 
   return (
@@ -104,18 +105,18 @@ function OwnerDashboardPage({ prospects, followups, historyEventsCount = 0, reco
 
 
       <SectionCard title="Histórico comercial" subtitle="Resumen ejecutivo local del Excel histórico.">
-        {!historicalSales ? <>
-          <p className="muted"><strong>Histórico pendiente de carga.</strong></p>
+        {!historicalSales || brokenLegacyHistorical ? <>
+          <p className="muted"><strong>Histórico pendiente de recarga.</strong></p>
           <p className="muted">Carga el Excel histórico en Configuración para complementar este panel.</p>
-        </> : <>
-          <p className="muted"><strong>Base histórica:</strong> {historicalSales.summary.totalRows}</p>
-          <p className="muted"><strong>Clientes actuales:</strong> {historicalSales.summary.currentClients}</p>
-          <p className="muted"><strong>Clientes con teléfono:</strong> {historicalSales.summary.clientsWithPhone}</p>
-          <p className="muted"><strong>Lotes libres:</strong> {historicalSales.summary.freeLots}</p>
-          <p className="muted"><strong>Predio principal:</strong> {historicalSales.summary.topProperties[0]?.name ?? 'N/A'}</p>
-          <p className="muted"><strong>Vendedor principal:</strong> {historicalSales.summary.topSellers[0]?.name ?? 'N/A'}</p>
-          <p className="muted"><strong>Última carga local:</strong> {new Date(historicalSales.updatedAt).toLocaleString()}</p>
-        </>}
+        </> : <div className="stats-grid">
+          <StatCard label="Base histórica" value={String(historicalSales.summary.totalRows)} />
+          <StatCard label="Clientes actuales" value={String(historicalSales.summary.currentClients)} />
+          <StatCard label="Clientes con teléfono" value={String(historicalSales.summary.clientsWithPhone)} />
+          <StatCard label="Lotes libres" value={String(historicalSales.summary.freeLots)} />
+          <StatCard label="Predio principal" value={historicalSales.summary.topProperties[0]?.name ?? 'N/A'} />
+          <StatCard label="Vendedor principal" value={historicalSales.summary.topSellers[0]?.name ?? 'N/A'} />
+          <StatCard label="Última carga local" value={new Date(historicalSales.updatedAt).toLocaleString()} />
+        </div>}
       </SectionCard>
 
       <SectionCard title="Etapa actual" subtitle="Dashboard maestro como resumen ejecutivo.">

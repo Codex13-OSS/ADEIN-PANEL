@@ -9,6 +9,12 @@ export type HistoricalSalesSummary = {
   soldWithoutPhone: number;
   topProperties: Array<{ name: string; count: number }>;
   topSellers: Array<{ name: string; count: number }>;
+  totalProperties?: number;
+  soldLots?: number;
+  reservedLots?: number;
+  availableLots?: number;
+  sourceQuality?: 'xlsx_parsed' | 'legacy_text_parse' | 'fallback';
+  parsedSheetName?: string;
 };
 
 export type HistoricalSalesStore = {
