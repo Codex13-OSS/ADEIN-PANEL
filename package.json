@@ -12,6 +12,7 @@
     "db:snapshot": "node scripts/db-dashboard-snapshot.mjs",
     "db:api:readonly": "node scripts/db-readonly-api-server.mjs",
     "db:api:self-check": "node scripts/db-readonly-api-self-check.mjs",
+    "db:readonly-synthetic-dashboard:self-check": "node scripts/db-readonly-synthetic-dashboard-self-check.mjs",
     "db:migration:dry-run": "node scripts/db-migration-dry-run.mjs",
     "db:migration:dry-run:self-check": "node scripts/db-migration-dry-run-self-check.mjs",
     "db:import-staging": "node scripts/db-import-staging-write-gate.mjs",

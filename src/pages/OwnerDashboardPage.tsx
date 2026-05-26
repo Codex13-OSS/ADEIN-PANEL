@@ -15,6 +15,7 @@ function OwnerDashboardPage({ prospects, followups, recommendedActions, historic
   const highIntention = prospects.filter((item) => item.intentionLevel === 'Alta').length;
   const pendingFollowups = followups.filter((item) => !item.completed).length;
   const { appliedSnapshot } = useDbSnapshot();
+  const syntheticSnapshot = appliedSnapshot as (typeof appliedSnapshot & { syntheticToken?: string; counts?: Record<string, number>; relationship?: Record<string, unknown> }) | null;
 
   return (
     <div className="page-grid">
@@ -51,6 +52,21 @@ function OwnerDashboardPage({ prospects, followups, recommendedActions, historic
             <p className="muted"><strong>mode:</strong> {appliedSnapshot.mode}</p>
             <p className="muted"><strong>writesEnabled:</strong> {String(appliedSnapshot.writesEnabled)}</p>
             <p className="muted"><strong>generatedAt:</strong> {appliedSnapshot.generatedAt}</p>
+            {appliedSnapshot.mode === 'read_only_synthetic_dashboard' ? (
+              <>
+                <p className="muted"><strong>Estado:</strong> READ-ONLY / STAGING / SYNTHETIC</p>
+                <p className="muted"><strong>Datos sintéticos persistidos:</strong> NO REAL</p>
+                <p className="muted"><strong>Token:</strong> {syntheticSnapshot?.syntheticToken ?? 'n/a'}</p>
+                <ul style={{ paddingLeft: 18 }}>
+                  <li>Conteos: {JSON.stringify(syntheticSnapshot?.counts ?? {})}</li>
+                  <li>Propiedad sintética: {JSON.stringify(syntheticSnapshot?.relationship?.property ?? null)}</li>
+                  <li>Lote sintético: {JSON.stringify(syntheticSnapshot?.relationship?.lot ?? null)}</li>
+                  <li>Cliente sintético: {JSON.stringify(syntheticSnapshot?.relationship?.client ?? null)}</li>
+                  <li>Contrato sintético: {JSON.stringify(syntheticSnapshot?.relationship?.contract ?? null)}</li>
+                  <li>Pago programado sintético: {JSON.stringify(syntheticSnapshot?.relationship?.paymentSchedule ?? null)}</li>
+                </ul>
+              </>
+            ) : (
             <ul style={{ paddingLeft: 18 }}>
               <li>Clientes: {appliedSnapshot.summaryCards.clients.value}</li>
               <li>Lotes: {appliedSnapshot.summaryCards.lots.value}</li>
@@ -58,6 +74,7 @@ function OwnerDashboardPage({ prospects, followups, recommendedActions, historic
               <li>Cobranza esperada: {appliedSnapshot.summaryCards.expectedCollection.value} {appliedSnapshot.summaryCards.expectedCollection.currency ?? ''}</li>
               <li>Cobranza pendiente: {appliedSnapshot.summaryCards.pendingCollection.value} {appliedSnapshot.summaryCards.pendingCollection.currency ?? ''}</li>
             </ul>
+            )}
             <h4>Warnings</h4>
             {appliedSnapshot.warnings.length === 0 ? <p className="muted">Sin warnings.</p> : (
               <ul style={{ paddingLeft: 18 }}>{appliedSnapshot.warnings.map((item) => <li key={item}>⚠️ {item}</li>)}</ul>

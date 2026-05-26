@@ -13,6 +13,8 @@ type ReadonlyApiResponse = {
   mode?: unknown;
   writesEnabled?: unknown;
   summaryCards?: unknown;
+  syntheticOnly?: unknown;
+  syntheticToken?: unknown;
 };
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -21,7 +23,7 @@ function isObject(value: unknown): value is Record<string, unknown> {
 
 export async function fetchSnapshotFromReadonlyApi(baseUrl: string): Promise<DbDashboardSnapshot> {
   const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
-  const endpoint = `${normalizedBaseUrl}/api/db/snapshot`;
+  const endpoint = `${normalizedBaseUrl}/api/db/synthetic-dashboard`;
   const response = await fetch(endpoint, {
     method: 'GET',
     headers: { Accept: 'application/json' },
@@ -41,12 +43,15 @@ export async function fetchSnapshotFromReadonlyApi(baseUrl: string): Promise<DbD
   if (readOnlyPayload.ok !== true) {
     throw new Error('Respuesta inválida: ok debe ser true.');
   }
-  if (readOnlyPayload.mode !== 'read_only') {
-    throw new Error('Respuesta inválida: mode debe ser read_only.');
-  }
   if (readOnlyPayload.writesEnabled !== false) {
     throw new Error('Respuesta inválida: writesEnabled debe ser false.');
   }
+  if (readOnlyPayload.mode === 'read_only_synthetic_dashboard') {
+    if (readOnlyPayload.syntheticOnly !== true) throw new Error('Respuesta inválida: syntheticOnly debe ser true.');
+    if (typeof readOnlyPayload.syntheticToken !== 'string') throw new Error('Respuesta inválida: syntheticToken es requerido.');
+    return payload as DbDashboardSnapshot;
+  }
+  if (readOnlyPayload.mode !== 'read_only') throw new Error('Respuesta inválida: mode debe ser read_only.');
   if (!isObject(readOnlyPayload.summaryCards)) {
     throw new Error('Respuesta inválida: summaryCards es requerido.');
   }
