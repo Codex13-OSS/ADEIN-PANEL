@@ -14,6 +14,7 @@ import { CrmTab } from '../pages/CrmPage';
 import AdeinAnimatedBackground from './AdeinAnimatedBackground';
 import { AnalyzedConversation, CrmHistoryEvent, Followup, Prospect, RecommendedAction } from '../types/crm';
 import { clearCrmStorage, loadCrmStorage, saveCrmStorage } from '../lib/crmStorage';
+import { buildFollowupReadinessCandidate, buildProspectReadinessCandidate, hasDuplicateProspectPhone } from '../lib/crmPipelineLocal';
 import { DbSnapshotProvider } from '../context/DbSnapshotContext';
 
 export type OwnerSection = 'dashboard' | 'crm' | 'business' | 'campaigns' | 'sellers' | 'documents' | 'settings';
@@ -87,18 +88,11 @@ function Shell({ session, defaultSection, onLogout }: Props) {
   };
   const section = isSeller && activeSection !== 'documents' ? sectionByCrmTab[activeCrmTab] : activeSection;
 
-  const isGenericPhone = (phone: string) => {
-    const normalized = phone.trim().toLowerCase();
-    if (!normalized) return true;
-    return normalized.includes('mock') || normalized.includes('contacto móvil') || normalized.includes('contacto movil');
-  };
-
   const handleSaveProspect = (analysis: AnalyzedConversation): 'created' | 'duplicate' => {
-    const hasRealPhone = !isGenericPhone(analysis.phone);
-    const duplicate = hasRealPhone && prospects.some((item) => !isGenericPhone(item.phone) && item.phone.trim() === analysis.phone.trim());
+    const duplicate = hasDuplicateProspectPhone(prospects, analysis.phone);
     if (duplicate) return 'duplicate';
 
-    setProspects((previous) => [...previous, {
+    const createdProspect = {
       id: `prospect-${Date.now()}`,
       name: analysis.name,
       phone: analysis.phone,
@@ -108,18 +102,21 @@ function Shell({ session, defaultSection, onLogout }: Props) {
       lastContact: 'Ahora',
       nextAction: analysis.nextAction,
       intentionLevel: analysis.interestLevel === 'Alto' ? 'Alta' : analysis.interestLevel === 'Medio' ? 'Media' : 'Baja',
-    }]);
+    } as const;
+
+    setProspects((previous) => [...previous, createdProspect]);
 
     appendHistoryEvent({
       type: 'prospect_created',
       title: 'Prospecto creado',
-      description: `Se agregó a ${analysis.name} al CRM desde análisis de WhatsApp.`,
+      description: `Se agregó a ${analysis.name} al CRM desde análisis de WhatsApp. Payload local listo para BD v063 (sin envío).`,
       prospectName: analysis.name,
       prospectPhone: analysis.phone,
       property: analysis.property,
       source: 'whatsapp_txt',
     });
 
+    void buildProspectReadinessCandidate(createdProspect, analysis, 'whatsapp_txt');
     return 'created';
   };
 
@@ -127,7 +124,7 @@ function Shell({ session, defaultSection, onLogout }: Props) {
     const duplicate = followups.some((item) => !item.completed && item.prospectName.toLowerCase() === analysis.name.toLowerCase() && item.action.toLowerCase() === analysis.nextAction.toLowerCase());
     if (duplicate) return 'duplicate';
 
-    setFollowups((previous) => [{
+    const createdFollowup = {
       id: `followup-${Date.now()}`,
       prospectName: analysis.name,
       action: analysis.nextAction,
@@ -135,18 +132,21 @@ function Shell({ session, defaultSection, onLogout }: Props) {
       priority: analysis.interestLevel === 'Alto' ? 'Alta' : analysis.interestLevel === 'Medio' ? 'Media' : 'Baja',
       state: 'Pendiente de hoy',
       completed: false,
-    }, ...previous]);
+    } as const;
+
+    setFollowups((previous) => [createdFollowup, ...previous]);
 
     appendHistoryEvent({
       type: 'followup_created',
       title: 'Seguimiento creado',
-      description: `Se programó seguimiento para ${analysis.name}.`,
+      description: `Se programó seguimiento para ${analysis.name}. Payload local listo para BD v063 (sin envío).`,
       prospectName: analysis.name,
       prospectPhone: analysis.phone,
       property: analysis.property,
       source: 'whatsapp_txt',
     });
 
+    void buildFollowupReadinessCandidate(createdFollowup, session.username, 'whatsapp_txt');
     return 'created';
   };
 

@@ -62,7 +62,8 @@
     "db:minimum-write:precommit-evidence": "node scripts/db-minimum-persistent-write-precommit-evidence.mjs",
     "db:minimum-write:precommit-evidence:self-check": "node scripts/db-minimum-persistent-write-precommit-evidence-self-check.mjs",
     "db:controlled-minimum-synthetic-write:v060": "node scripts/db-controlled-minimum-synthetic-persistent-write-v060.mjs",
-    "db:controlled-minimum-synthetic-write:v060:self-check": "node scripts/db-controlled-minimum-synthetic-persistent-write-v060-self-check.mjs"
+    "db:controlled-minimum-synthetic-write:v060:self-check": "node scripts/db-controlled-minimum-synthetic-persistent-write-v060-self-check.mjs",
+    "crm:whatsapp-pipeline:self-check": "node scripts/crm-whatsapp-pipeline-self-check.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
