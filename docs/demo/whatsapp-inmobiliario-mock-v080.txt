@@ -1,0 +1,7 @@
+[26/05/2026, 09:12:10] Asesor ADEIN: ¡Hola! Gracias por escribir a ADEIN. ¿Buscas terreno para inversión o para construir?
+[26/05/2026, 09:13:02] Cliente Demo: Hola, para inversión. Me interesa algo en la zona de Los Cedros.
+[26/05/2026, 09:13:44] Asesor ADEIN: Perfecto. Tenemos opciones desde 620 mil MXN con acceso principal pavimentado.
+[26/05/2026, 09:14:18] Cliente Demo: Mi presupuesto está cerca de 700 mil y quisiera cerrar en 1 mes.
+[26/05/2026, 09:15:03] Asesor ADEIN: Excelente, te puedo enviar ubicación y disponibilidad hoy mismo.
+[26/05/2026, 09:16:11] Cliente Demo: Sí por favor. También me interesa saber si se puede agendar visita el sábado.
+[26/05/2026, 09:17:08] Asesor ADEIN: Claro, te propongo confirmar visita guiada para este sábado 11:00 AM.

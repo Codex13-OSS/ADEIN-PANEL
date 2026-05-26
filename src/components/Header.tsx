@@ -7,7 +7,7 @@ function Header({ title, subtitle, role, username, onLogout }: Props) {
   return (
     <header className="app-header">
       <div>
-        <img src="/brand/casitas.png" alt="casitas" className="header-icon" />
+        <div className="header-icon" aria-label="ADEIN dashboard" role="img">A</div>
         <div>
           <h1>{title}</h1>
           <p>{subtitle}</p>
