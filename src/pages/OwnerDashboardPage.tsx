@@ -15,12 +15,13 @@ const READONLY_API_SNAPSHOT_ENDPOINT = (import.meta.env.VITE_CRM_PROSPECT_STAGIN
 type Props = {
   prospects: Prospect[];
   followups: Followup[];
+  historyEventsCount?: number;
   recommendedActions: RecommendedAction[];
   historicalMetrics: ReturnType<typeof import('../lib/historicalMetrics').getHistoricalMetrics>;
   onOpenWhatsAppAnalysis?: () => void;
 };
 
-function OwnerDashboardPage({ prospects, followups, recommendedActions, historicalMetrics, onOpenWhatsAppAnalysis }: Props) {
+function OwnerDashboardPage({ prospects, followups, historyEventsCount = 0, recommendedActions, historicalMetrics, onOpenWhatsAppAnalysis }: Props) {
   const localMetrics = deriveLocalPipelineMetrics(prospects, followups, []);
   const { appliedSnapshot } = useDbSnapshot();
   const readonlyFromAppliedSnapshot = useMemo(() => normalizeProspectStagingReadonlySnapshot(appliedSnapshot), [appliedSnapshot]);
@@ -45,22 +46,38 @@ function OwnerDashboardPage({ prospects, followups, recommendedActions, historic
 
   const dataFeedUiState: DataFeedUiState = readonlyFromApi ? 'live_preview_available' : 'demo_local';
   const dashboardPreview = readonlyFromApi ?? readonlyFromAppliedSnapshot;
+  const hasLocalData = prospects.length > 0 || followups.length > 0 || historyEventsCount > 0;
+  const cards = hasLocalData ? {
+    totalProspects: prospects.length,
+    totalConversations: prospects.length,
+    totalAnalyses: prospects.length,
+    totalFollowups: followups.filter((item) => !item.completed).length,
+    totalHistoryEvents: historyEventsCount,
+  } : {
+    totalProspects: dashboardPreview.cards.totalProspects,
+    totalConversations: dashboardPreview.cards.totalConversations,
+    totalAnalyses: dashboardPreview.cards.totalAnalyses,
+    totalFollowups: dashboardPreview.cards.totalFollowups,
+    totalHistoryEvents: dashboardPreview.cards.totalHistoryEvents,
+  };
   const latestProspect = prospects[prospects.length - 1] ?? null;
   const nextPendingFollowup = followups.find((item) => !item.completed) ?? null;
 
   return (
     <div className="page-grid">
       <SectionCard title="Panel comercial ADEIN" subtitle="Vista ejecutiva de prospectos y actividad comercial.">
-        <p className="muted"><strong>Demo con datos simulados.</strong> No contiene datos reales todavía.</p>
+        <p className="muted">
+          {hasLocalData ? <><strong>Datos locales activos.</strong> Esta vista refleja el flujo real guardado en tu navegador (localStorage).</> : <><strong>Demo con datos simulados.</strong> No contiene datos reales todavía.</>}
+        </p>
       </SectionCard>
 
       <section className="stats-grid">
         {[
-          ['Prospectos nuevos', String(dashboardPreview.cards.totalProspects)],
-          ['Conversaciones cargadas', String(dashboardPreview.cards.totalConversations)],
-          ['Análisis listos', String(dashboardPreview.cards.totalAnalyses)],
-          ['Seguimientos pendientes', String(dashboardPreview.cards.totalFollowups)],
-          ['Actividad registrada', String(dashboardPreview.cards.totalHistoryEvents)],
+          ['Prospectos nuevos', String(cards.totalProspects)],
+          ['Conversaciones cargadas', String(cards.totalConversations)],
+          ['Análisis listos', String(cards.totalAnalyses)],
+          ['Seguimientos pendientes', String(cards.totalFollowups)],
+          ['Actividad registrada', String(cards.totalHistoryEvents)],
         ].map(([label, value]) => <StatCard key={label} label={label} value={value} />)}
       </section>
 

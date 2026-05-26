@@ -42,7 +42,7 @@ function Sidebar({ role, current, onChange, activeCrmTab = 'prospectos' }: Sideb
   return (
     <aside className="sidebar">
       <div className="brand-stack">
-        <img src="/brand/adein.png" alt="ADEIN" className="logo-mini" />
+        <div className="logo-mini" aria-label="ADEIN" role="img">AD</div>
         <p>Panel comercial inmobiliario</p>
       </div>
       <nav>
