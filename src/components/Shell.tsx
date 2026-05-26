@@ -205,7 +205,7 @@ function Shell({ session, defaultSection, onLogout }: Props) {
   const historicalMetrics = useMemo(() => getHistoricalMetrics(), []);
 
   const renderPage = () => {
-    if (section === 'dashboard') return <OwnerDashboardPage prospects={prospects} followups={followups} recommendedActions={recommendedActions} historicalMetrics={historicalMetrics} />;
+    if (section === 'dashboard') return <OwnerDashboardPage prospects={prospects} followups={followups} recommendedActions={recommendedActions} historicalMetrics={historicalMetrics} onOpenWhatsAppAnalysis={() => { setActiveSection('crm'); setActiveCrmTab('whatsapp'); }} />;
     if (section === 'crm' || section === 'analyze' || section === 'followups' || section === 'performance') return <CrmPage role={session.role} activeTab={activeCrmTab} onTabChange={setActiveCrmTab} prospects={prospects} followups={followups} historyEvents={historyEvents} recommendedActions={recommendedActions} analyzedConversation={MOCK_ANALYSIS} onSaveProspect={handleSaveProspect} onCreateFollowup={handleCreateFollowup} onCompleteFollowup={handleCompleteFollowup} onResetCrmDemo={handleResetCrmDemo} />;
     if (section === 'business') return <CurrentBusinessPage historicalMetrics={historicalMetrics} />;
     if (section === 'campaigns') return <CampaignsPage historicalMetrics={historicalMetrics} />;
