@@ -67,7 +67,9 @@
     "crm:prospect-staging:dry-run": "node scripts/crm-prospect-staging-db-persistence-dry-run.mjs",
     "crm:prospect-staging:self-check": "node scripts/crm-prospect-staging-db-persistence-self-check.mjs",
     "crm:prospect-staging:schema-apply": "node scripts/crm-prospect-staging-schema-apply-v064.mjs",
-    "crm:prospect-staging:schema-apply:self-check": "node scripts/crm-prospect-staging-schema-apply-self-check-v064.mjs"
+    "crm:prospect-staging:schema-apply:self-check": "node scripts/crm-prospect-staging-schema-apply-self-check-v064.mjs",
+    "crm:prospect-staging:synthetic-write": "node scripts/crm-prospect-staging-synthetic-write-rehearsal-v065.mjs",
+    "crm:prospect-staging:synthetic-write:self-check": "node scripts/crm-prospect-staging-synthetic-write-rehearsal-self-check-v065.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
