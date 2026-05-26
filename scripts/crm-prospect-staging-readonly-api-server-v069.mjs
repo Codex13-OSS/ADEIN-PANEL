@@ -3,16 +3,16 @@ import http from 'node:http';
 import { pathToFileURL } from 'node:url';
 
 const PHASE = 'v069';
-const MODE_DRY = 'dry_run_mock_readonly_api_server';
-const MODE_CONTROLLED = 'controlled_readonly_api_server';
+const MODE_MOCK = 'mock_readonly_api_server';
 const SERVICE_NAME = 'crm-prospect-staging-readonly-api-v069';
 const ALLOWED_ORIGINS = new Set(['http://127.0.0.1:5173', 'http://localhost:5173', 'http://38.242.222.25:3016']);
 const FORBIDDEN_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
+const ROUTES = ['GET /health', 'GET /api/crm/prospect-staging/readonly-snapshot', 'GET /api/crm/prospect-staging/readonly-evidence'];
 
 const mockSnapshot = {
   ok: true,
   phase: PHASE,
-  mode: MODE_DRY,
+  mode: MODE_MOCK,
   dryRun: true,
   readonly: true,
   databaseConnectionAttempted: false,
@@ -23,7 +23,7 @@ const mockSnapshot = {
     summaryCards: { totalProspects: 1, totalConversations: 1, totalAnalyses: 1, totalFollowups: 1, totalHistoryEvents: 1, syntheticRowsDetected: 3 },
     latestProspects: [], followups: [], historyEvents: [],
     sourceBreakdown: { source: [], review_status: [], status: [], intention_level: [] },
-    warnings: ['Mock fallback v069. Sin conexión BD.']
+    warnings: ['Mock fallback v069.1. Sin conexión BD ni credenciales.']
   }
 };
 
@@ -40,26 +40,11 @@ function json(req, res, statusCode, body) {
 }
 
 function isProductionSignal() {
-  return process.env.NODE_ENV === 'production' || process.env.ADEIN_DB_TARGET === 'production';
-}
-
-function hasControlledGates() {
-  return process.env.ADEIN_CRM_PROSPECT_STAGING_READONLY_API_V069 === '1'
-    && !!process.env.ADEIN_DB_ENV_FILE
-    && process.env.ADEIN_DB_TARGET === 'staging'
-    && process.env.ADEIN_DB_READONLY_API === '1'
-    && (process.env.ADEIN_API_BIND_HOST || '127.0.0.1') === '127.0.0.1'
-    && Number(process.env.ADEIN_API_PORT || 3091) === 3091;
-}
-
-async function loadControlledSnapshot() {
-  const { runControlledReadonlySnapshot } = await import('./lib/crm-prospect-staging-readonly-v069-shared.mjs');
-  return runControlledReadonlySnapshot({ phase: PHASE, mode: MODE_CONTROLLED });
+  return process.env.NODE_ENV === 'production' || process.env.ADEIN_DB_TARGET === 'production' || process.env.ADEIN_DB_ENV === 'production';
 }
 
 export function createReadonlyApiServer() {
-  const controlled = hasControlledGates();
-  return http.createServer(async (req, res) => {
+  return http.createServer((req, res) => {
     if (req.method === 'OPTIONS') {
       res.writeHead(204, buildCorsHeaders(req));
       res.end();
@@ -69,26 +54,38 @@ export function createReadonlyApiServer() {
     if (req.method !== 'GET') return json(req, res, 405, { ok: false, phase: PHASE, error: 'Method Not Allowed', readonly: true, forbiddenMethods: FORBIDDEN_METHODS });
 
     if (req.url === '/health') {
-      return json(req, res, 200, { ok: true, phase: PHASE, service: SERVICE_NAME, mode: controlled ? MODE_CONTROLLED : MODE_DRY, readonly: true, databaseConnectionAttempted: controlled, writesEnabled: false, productionTouched: false });
+      return json(req, res, 200, {
+        ok: true,
+        phase: PHASE,
+        service: SERVICE_NAME,
+        mode: MODE_MOCK,
+        readonly: true,
+        databaseConnectionAttempted: false,
+        writeExecuted: false,
+        commitExecuted: false,
+        productionTouched: false
+      });
     }
 
     if (req.url === '/api/crm/prospect-staging/readonly-snapshot') {
-      if (!controlled) return json(req, res, 200, mockSnapshot);
-      try { return json(req, res, 200, await loadControlledSnapshot()); } catch (error) { return json(req, res, 500, { ok: false, phase: PHASE, mode: MODE_CONTROLLED, readonly: true, error: error?.message || String(error) }); }
+      return json(req, res, 200, mockSnapshot);
     }
 
     if (req.url === '/api/crm/prospect-staging/readonly-evidence') {
       return json(req, res, 200, {
         ok: true,
         phase: PHASE,
+        mode: MODE_MOCK,
         readonly: true,
-        mode: controlled ? MODE_CONTROLLED : MODE_DRY,
-        routes: ['GET /health', 'GET /api/crm/prospect-staging/readonly-snapshot', 'GET /api/crm/prospect-staging/readonly-evidence'],
-        blockedMethods: FORBIDDEN_METHODS,
-        blockedRoutePatterns: ['/write', '/commit', '/rollback', '/admin/delete', '/production'],
-        databaseConnectionAttempted: controlled,
+        verifiedNoTransaction: true,
+        verifiedNoWrite: true,
+        verifiedNoCommit: true,
+        targetDatabase: 'none_mock',
+        databaseConnectionAttempted: false,
         writeExecuted: false,
         commitExecuted: false,
+        blockedMethods: FORBIDDEN_METHODS,
+        routes: ROUTES
       });
     }
 
@@ -105,13 +102,29 @@ export async function startReadonlyApiServer({ host = process.env.ADEIN_API_BIND
     server.once('error', reject);
     server.listen(port, host, resolve);
   });
-  return { server, host, port, controlled: hasControlledGates() };
+
+  return { server, host, port };
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  if (isProductionSignal()) {
-    console.error(JSON.stringify({ ok: false, phase: PHASE, aborted: true, error: 'Abortado por señal de producción' }, null, 2));
+  try {
+    const { host, port } = await startReadonlyApiServer();
+    console.log(JSON.stringify({
+      ok: true,
+      phase: PHASE,
+      mode: MODE_MOCK,
+      serverStarted: true,
+      databaseConnectionAttempted: false,
+      readonly: true,
+      writeExecuted: false,
+      commitExecuted: false,
+      productionTouched: false,
+      bindHost: host,
+      port,
+      routes: ROUTES
+    }, null, 2));
+  } catch (error) {
+    console.error(JSON.stringify({ ok: false, phase: PHASE, aborted: true, error: error?.message || String(error) }, null, 2));
     process.exit(1);
   }
-  console.log(JSON.stringify({ ok: true, phase: PHASE, mode: MODE_DRY, dryRun: true, serverStarted: false, note: 'Script cargado. Para iniciar server usar startReadonlyApiServer() explícitamente.' }, null, 2));
 }

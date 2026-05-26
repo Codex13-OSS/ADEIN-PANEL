@@ -26,24 +26,41 @@ if (payload.mode !== 'dry_run' || payload.databaseConnectionAttempted !== false 
 if (payload.allowedRoutes.some((route) => !route.startsWith('GET '))) fail('Hay rutas permitidas no-GET');
 if (!payload.forbiddenRoutes.includes('/write')) fail('No bloquea /write');
 
-if (run(serverScript, { NODE_ENV: 'production' }).status === 0) fail('Server debe abortar en producción');
+if (run(serverScript, { NODE_ENV: 'production' }).status === 0) fail('Server debe abortar con NODE_ENV=production');
+if (run(serverScript, { ADEIN_DB_TARGET: 'production' }).status === 0) fail('Server debe abortar con ADEIN_DB_TARGET=production');
+if (run(serverScript, { ADEIN_DB_ENV: 'production' }).status === 0) fail('Server debe abortar con ADEIN_DB_ENV=production');
 
 const mainSource = fs.readFileSync(serverScript, 'utf8');
-if (/\b(mysql|mysql2)\b/i.test(fs.readFileSync(clientFile, 'utf8'))) fail('Client no debe importar mysql/mysql2');
-if (/\b(import\.meta\.env|process\.env|password|token|secret|ADEIN_DB_)\b/i.test(fs.readFileSync(clientFile, 'utf8'))) fail('Client no debe leer env/credenciales');
-if (/\b(INSERT|UPDATE|DELETE)\s+(INTO\s+)?`?(clients|contracts|payment_schedule|lots)`?/i.test(mainSource)) fail('Destino prohibido detectado');
+const clientSource = fs.readFileSync(clientFile, 'utf8');
+if (/\b(mysql|mysql2)\b/i.test(clientSource)) fail('Client no debe importar mysql/mysql2');
+if (/\b(import\.meta\.env|process\.env|password|token|secret|ADEIN_DB_)\b/i.test(clientSource)) fail('Client no debe leer env/credenciales');
+if (/\b(INSERT\s+INTO|UPDATE\s+[`\"\w]|DELETE\s+FROM|ALTER\s+TABLE|DROP\s+TABLE|TRUNCATE\s+TABLE|CREATE\s+TABLE|REPLACE\s+INTO)\b/i.test(mainSource)) fail('Keywords SQL peligrosas no permitidas en server mock/local');
+if (/ADEIN_DB_ENV_FILE/.test(mainSource)) fail('Server mock/local no debe leer ADEIN_DB_ENV_FILE por defecto');
+if (/\/\b(api\/)?(write|commit|rollback|admin)\b/i.test(mainSource)) fail('Rutas write-like no permitidas detectadas');
 
 const { server, port } = await startReadonlyApiServer({ host: '127.0.0.1', port: 3095 });
 try {
   const base = `http://127.0.0.1:${port}`;
   const health = await fetch(`${base}/health`);
   if (health.status !== 200) fail('health no responde 200');
+
+  const snapshot = await fetch(`${base}/api/crm/prospect-staging/readonly-snapshot`);
+  if (snapshot.status !== 200) fail('readonly-snapshot no responde 200');
+  const snapshotPayload = await snapshot.json();
+  if (snapshotPayload.databaseConnectionAttempted !== false || snapshotPayload.writeExecuted !== false || snapshotPayload.commitExecuted !== false) fail('Snapshot no cumple contrato read-only mock');
+
+  const evidence = await fetch(`${base}/api/crm/prospect-staging/readonly-evidence`);
+  if (evidence.status !== 200) fail('readonly-evidence no responde 200');
+  const evidencePayload = await evidence.json();
+  if (evidencePayload.verifiedNoWrite !== true || evidencePayload.verifiedNoCommit !== true || evidencePayload.databaseConnectionAttempted !== false) fail('Evidencia mock inválida');
+
   const post = await fetch(`${base}/health`, { method: 'POST' });
   if (post.status !== 405) fail('POST debe retornar 405');
+
   const notFound = await fetch(`${base}/route-not-found`);
   if (notFound.status !== 404) fail('Ruta desconocida debe retornar 404');
 } finally {
-  await new Promise((resolve) => server.close(resolve));
+  await new Promise((resolveClose) => server.close(resolveClose));
 }
 
 process.stdout.write(`${JSON.stringify({ ok: true, phase: PHASE, mode: 'self_check', checksPassed: true }, null, 2)}\n`);
