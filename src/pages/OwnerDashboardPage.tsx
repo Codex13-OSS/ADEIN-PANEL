@@ -69,9 +69,9 @@ function OwnerDashboardPage({ prospects, followups, historyEventsCount = 0, reco
 
   return (
     <div className="page-grid">
-      <SectionCard title="Panel comercial ADEIN" subtitle="Vista ejecutiva de prospectos y actividad comercial.">
+      <SectionCard title="Panel comercial ADEIN" subtitle="Vista ejecutiva con prospectos del CRM local e histórico cargado desde Excel.">
         <p className="muted">
-          {hasLocalData ? <><strong>Datos locales activos.</strong> Esta vista refleja el flujo real guardado en tu navegador (localStorage).</> : <><strong>Demo con datos simulados.</strong> No contiene datos reales todavía.</>}
+          {hasLocalData ? <><strong>Datos locales activos.</strong> Esta vista refleja el flujo real guardado en tu navegador (localStorage).</> : <><strong>Información cargada en este navegador.</strong> Listo para revisión comercial.</>}
         </p>
       </SectionCard>
 
@@ -86,7 +86,7 @@ function OwnerDashboardPage({ prospects, followups, historyEventsCount = 0, reco
       </section>
 
       <SectionCard title="Captación comercial" subtitle="Resumen de prospectos generados desde conversaciones comerciales.">
-        <p className="muted"><strong>Último prospecto:</strong> {latestProspect ? `${latestProspect.name} · ${latestProspect.status}` : 'Sin prospectos nuevos todavía.'}</p>
+        <p className="muted"><strong>Último prospecto:</strong> {latestProspect ? `${latestProspect.name} · ${latestProspect.status}` : 'Sin prospectos nuevos cargados localmente.'}</p>
         <p className="muted"><strong>Próximo seguimiento:</strong> {nextPendingFollowup ? `${nextPendingFollowup.prospectName} · ${nextPendingFollowup.suggestedTime}` : 'Sin seguimientos pendientes.'}</p>
         <button type="button" className="btn-primary" onClick={() => onOpenWhatsAppAnalysis?.()}>
           Ir a CRM ventas
@@ -96,7 +96,7 @@ function OwnerDashboardPage({ prospects, followups, historyEventsCount = 0, reco
 
       <SectionCard title="Centro de decisiones" subtitle="Alertas comerciales prioritarias">
         <div className="decision-grid">
-          <DecisionCard level="risk" title="Alerta de mayor riesgo" description={historicalMetrics.highestRiskAlert ? `Contrato ${historicalMetrics.highestRiskAlert.contract_id} con ${historicalMetrics.highestRiskAlert.days_overdue} días de atraso.` : 'Sin alertas de riesgo alto.'} />
+          <DecisionCard level="risk" title="Alerta de mayor riesgo" description={historicalMetrics.highestRiskAlert ? `Contrato ${historicalMetrics.highestRiskAlert.contract_id} con ${historicalMetrics.highestRiskAlert.days_overdue} días de atraso.` : 'Sin alertas de riesgo alto en la carga local.'} />
           <DecisionCard level="opportunity" title="Oportunidad de recuperación" description={`Recuperación estimada: ${historicalMetrics.recoveryOpportunity}% del caso crítico si se atiende hoy.`} />
           <DecisionCard level="high" title="Prioridad alta" description={`${localMetrics.highIntentionProspects} prospectos con intención alta para atención comercial.`} />
           <DecisionCard level="recommendation" title="Recomendación" description={recommendedActions[0]?.suggestedAction ?? 'Priorizar seguimiento comercial del día.'} />
@@ -120,9 +120,9 @@ function OwnerDashboardPage({ prospects, followups, historyEventsCount = 0, reco
       </SectionCard>
 
       <SectionCard title="Etapa actual" subtitle="Dashboard maestro como resumen ejecutivo.">
-        <p className="muted">Este panel concentra el resumen ejecutivo del avance comercial.</p>
-        <p className="muted"><strong>Estado de vista previa:</strong> {dataFeedUiState === 'live_preview_available' ? 'Vista previa de datos disponible' : 'Vista previa simulada activa'}</p>
-        <p className="muted"><strong>Demo con datos simulados.</strong> No contiene datos reales todavía.</p>
+        <p className="muted">Este panel concentra el resumen ejecutivo para revisión comercial.</p>
+        <p className="muted"><strong>Estado de vista previa:</strong> {dataFeedUiState === 'live_preview_available' ? 'Vista comercial activa' : 'Vista comercial activa'}</p>
+        <p className="muted"><strong>CRM local activo.</strong> Información cargada en este navegador para revisión comercial.</p>
       </SectionCard>
     </div>
   );
