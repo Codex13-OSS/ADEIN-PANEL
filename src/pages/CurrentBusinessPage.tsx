@@ -25,8 +25,8 @@ export default function CurrentBusinessPage({ historicalMetrics }: Props) {
     lotsAvailable: historicalMetrics.lotsAvailable,
     lotsSold: historicalMetrics.lotsSold,
     lotsReserved: historicalMetrics.lotsReserved,
-    averagePaidPercentage: `${historicalMetrics.averagePaidPercentage}% (referencia demo)`,
-    totalPendingBalance: `$${historicalMetrics.totalPendingBalance.toLocaleString('es-MX')} MXN (referencia demo)`,
+    averagePaidPercentage: `${historicalMetrics.averagePaidPercentage}% (referencia local)`,
+    totalPendingBalance: `$${historicalMetrics.totalPendingBalance.toLocaleString('es-MX')} MXN (referencia local)`,
   };
 
   const observations = hasHistoricalSource && historicalSales ? [
@@ -34,11 +34,14 @@ export default function CurrentBusinessPage({ historicalMetrics }: Props) {
     `Lotes libres: ${historicalSales.summary.freeLots}. Sugerencia: priorizar cierres y apartados esta semana.`,
     `Vendedor líder: ${historicalSales.summary.topSellers[0]?.name ?? 'N/A'}. Sugerencia: revisión de cartera por vendedor.`,
   ] : [
-    'Predio Demo Norte: Priorizar cobranza preventiva en contratos reservados.',
-    'Predio Demo Sur: Empujar cierres de lotes libres con seguimiento comercial.',
+    'Predio Norte: Priorizar cobranza preventiva en contratos reservados locales.',
+    'Predio Sur: Empujar cierres de lotes libres con seguimiento comercial local.',
   ];
 
   return <div className="page-grid">
+    <SectionCard title="Negocio actual" subtitle="Resumen comercial construido con el histórico local cargado desde Excel.">
+      <p className="muted"><strong>Histórico local disponible.</strong> Los datos se muestran desde la carga local del navegador.</p>
+    </SectionCard>
     <section className="stats-grid">{[
       ['Clientes actuales', String(metrics.totalClients)],
       ['Predios', String(metrics.properties)],
@@ -48,7 +51,7 @@ export default function CurrentBusinessPage({ historicalMetrics }: Props) {
       ['% promedio pagado', String(metrics.averagePaidPercentage)],
       ['Saldo pendiente total', String(metrics.totalPendingBalance)],
     ].map(([l, v]) => <StatCard key={l} label={l} value={v} />)}</section>
-    <SectionCard title="Fuente de datos"><p className="muted"><strong>{hasHistoricalSource ? 'Fuente: Histórico local desde Excel.' : 'Fuente: demo/mock local.'}</strong></p></SectionCard>
+    <SectionCard title="Fuente de datos"><p className="muted"><strong>{hasHistoricalSource ? 'Histórico cargado desde Excel.' : 'Información cargada en este navegador.'}</strong></p></SectionCard>
     <SectionCard title="Observaciones importantes"><ul>{observations.map((obs) => <li key={obs}>{obs}</li>)}</ul></SectionCard>
   </div>;
 }
