@@ -218,3 +218,23 @@ th, td { padding: .8rem; border-bottom: 1px solid var(--border-soft); text-align
   .login-logo { width: 240px; }
   .login-page .login-card { padding: 24px; }
 }
+
+.metrics-top-grid .stat-card { min-height: 112px; }
+.metrics-top-grid .stat-card small { display: block; margin-top: .35rem; }
+.dashboard-premium-grid { gap: 1rem; }
+.dashboard-main-grid { display: grid; grid-template-columns: 1.35fr .85fr; gap: 1rem; align-items: start; }
+.dashboard-bottom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: start; }
+.funnel-premium { display: grid; gap: .7rem; }
+.funnel-row { display: grid; gap: .35rem; }
+.funnel-meta { display: flex; justify-content: space-between; align-items: center; font-size: .82rem; color: var(--text-muted); }
+.funnel-meta strong { color: var(--text-main); font-weight: 600; }
+.funnel-track { height: 10px; background: var(--bg-soft); border-radius: 999px; overflow: hidden; border: 1px solid var(--border-soft); }
+.funnel-track span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #7BAA92, #08733B); }
+.mini-kpi-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; }
+.mini-kpi-grid .stat-card { padding: .85rem .9rem; border-radius: 14px; }
+.mini-kpi-grid .stat-card h3 { font-size: 1.3rem; }
+
+@media (max-width: 1100px) {
+  .dashboard-main-grid,
+  .dashboard-bottom-grid { grid-template-columns: 1fr; }
+}
