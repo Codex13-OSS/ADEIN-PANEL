@@ -198,7 +198,7 @@ function Shell({ session, defaultSection, onLogout }: Props) {
   const subtitle = useMemo(() => ({
     dashboard: 'Centro de decisiones comerciales del día', crm: 'Pipeline y operación comercial guiada', business: 'Estado operativo del predio actual',
     campaigns: 'Monitoreo visual de campañas activas', sellers: 'Gestión de equipo comercial', documents: 'Plataforma documental separada',
-    settings: 'Parámetros generales del panel', analyze: 'Extracción comercial mock desde conversaciones', followups: 'Agenda de acciones por prioridad',
+    settings: 'Parámetros generales del panel', analyze: 'Extracción comercial local desde conversaciones', followups: 'Agenda de acciones por prioridad',
     performance: 'Recomendaciones ejecutivas para vendedores',
   }[section]), [section]);
 
