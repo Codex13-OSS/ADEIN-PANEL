@@ -219,7 +219,7 @@ function Shell({ session, defaultSection, onLogout }: Props) {
       <AdeinAnimatedBackground variant="panel" />
       <Sidebar role={session.role} current={activeSection} activeCrmTab={activeCrmTab} onChange={handleSectionChange} />
       <section className="main-panel">
-        <Header role={session.role} title={title} subtitle={subtitle} username={session.username} onLogout={onLogout} />
+        <Header role={session.role} title={title} subtitle={subtitle} onLogout={onLogout} />
         <DbSnapshotProvider>{renderPage()}</DbSnapshotProvider>
       </section>
     </main>

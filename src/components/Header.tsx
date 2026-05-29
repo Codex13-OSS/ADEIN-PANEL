@@ -1,9 +1,9 @@
 import { Role } from './LoginView';
 import StatusBadge from './StatusBadge';
 
-type Props = { title: string; subtitle: string; role: Role; username: string; onLogout: () => void };
+type Props = { title: string; subtitle: string; role: Role; onLogout: () => void };
 
-function Header({ title, subtitle, role, username, onLogout }: Props) {
+function Header({ title, subtitle, role, onLogout }: Props) {
   return (
     <header className="app-header">
       <div>
