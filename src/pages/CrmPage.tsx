@@ -222,7 +222,7 @@ function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, follo
       <SectionCard title="CRM de ventas guiado" subtitle={role === 'owner' ? 'Vista administrativa con control por vendedor' : 'Vista vendedor con foco en acción comercial'}>
         <div className="tabs-row">{TAB_OPTIONS.map((tab) => <button key={tab.key} className={currentTab === tab.key ? 'active' : ''} onClick={() => handleTabChange(tab.key)}>{tab.label}</button>)}</div>
         <div className="inline-actions">
-          <button className="btn-outline" onClick={onResetCrmDemo}>Restablecer CRM demo</button>
+          <button className="btn-outline" onClick={onResetCrmDemo}>Restablecer CRM</button>
         </div>
       </SectionCard>
       {tabBody}

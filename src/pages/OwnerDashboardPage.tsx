@@ -103,7 +103,7 @@ function OwnerDashboardPage({ prospects, followups, historyEventsCount = 0, reco
       <SectionCard title="Panel comercial ADEIN" subtitle="Vista comercial con CRM local activo e histórico desde Excel.">
         <div className="inline-actions">
           <span className="badge badge-success">En operación</span>
-          <span className="badge badge-success">Beta comercial</span>
+          <span className="badge badge-success">Operación comercial</span>
           <span className="badge">Datos locales activos</span>
         </div>
       </SectionCard>
