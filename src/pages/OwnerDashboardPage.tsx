@@ -75,6 +75,16 @@ function OwnerDashboardPage({ prospects, followups, historyEventsCount = 0, reco
     { label: 'Cierres', value: Math.max(0, Math.round(cards.totalAnalyses * 0.2)) },
   ];
   const funnelMax = Math.max(...funnel.map((step) => step.value), 1);
+  const interestedProspects = prospects.length > 0
+    ? prospects.filter((item) => item.status === 'Interesado' || item.status === 'Interesado calificado' || item.status === 'Cita agendada' || item.intentionLevel === 'Alta').length
+    : Math.min(cards.totalProspects, cards.totalAnalyses);
+  const estimatedClosings = Math.min(interestedProspects, funnel.find((step) => step.label === 'Cierres')?.value ?? 0);
+  const toConversionPercent = (from: number, to: number) => Math.max(0, Math.min(100, Math.round((to / Math.max(from, to, 1)) * 100)));
+  const conversionRings = [
+    { label: 'Mensajes → Prospectos', value: toConversionPercent(cards.totalConversations, cards.totalProspects), detail: `${cards.totalProspects}/${Math.max(cards.totalConversations, cards.totalProspects, 1)}` },
+    { label: 'Prospectos → Interesados', value: toConversionPercent(cards.totalProspects, interestedProspects), detail: `${interestedProspects}/${Math.max(cards.totalProspects, interestedProspects, 1)}` },
+    { label: 'Interesados → Cierre', value: toConversionPercent(interestedProspects, estimatedClosings), detail: `${estimatedClosings}/${Math.max(interestedProspects, estimatedClosings, 1)}` },
+  ];
 
   const recentProspects = prospects.slice(-5).reverse();
 
@@ -106,7 +116,25 @@ function OwnerDashboardPage({ prospects, followups, historyEventsCount = 0, reco
       </section>
 
       <section className="dashboard-main-grid">
-        <SectionCard title="Embudo de conversión" subtitle="Contactos a cierres con datos locales activos.">
+        <div className="rings-card">
+          <SectionCard title="Embudo de conversión" subtitle="Porcentaje por etapa">
+            <div className="rings-row">
+              {conversionRings.map((ring) => (
+                <article key={ring.label} className="ring-item">
+                  <svg className="ring-svg" viewBox="0 0 44 44" aria-hidden="true">
+                    <circle className="ring-bg" cx="22" cy="22" r="18" pathLength="100" />
+                    <circle className="ring-progress" cx="22" cy="22" r="18" pathLength="100" style={{ strokeDashoffset: 100 - ring.value }} />
+                  </svg>
+                  <strong className="ring-value">{ring.value}%</strong>
+                  <span className="ring-detail">{ring.detail}</span>
+                  <span className="ring-label">{ring.label}</span>
+                </article>
+              ))}
+            </div>
+          </SectionCard>
+        </div>
+
+        <SectionCard title="Embudo comercial visual" subtitle="Contactos a cierres con datos locales activos.">
           <div className="funnel-premium">
             {funnel.map((step) => (
               <div key={step.label} className="funnel-row">
