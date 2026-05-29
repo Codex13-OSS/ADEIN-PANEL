@@ -147,12 +147,16 @@ function OwnerDashboardPage({ prospects, followups, historyEventsCount = 0, reco
       <section className="dashboard-bottom-grid">
         <SectionCard title="Rendimiento de predios" subtitle="Referencia comercial del portafolio activo.">
           <div className="funnel-premium">
-            {propertyPerformance.map((item) => (
-              <div key={item.name} className="funnel-row">
-                <div className="funnel-meta"><strong>{item.name}</strong><span>{item.score}%</span></div>
-                <div className="funnel-track"><span style={{ width: `${item.score}%` }} /></div>
-              </div>
-            ))}
+            {propertyPerformance.map((item, index) => {
+              const propertyName = typeof item.name === 'string' ? item.name : item.name.name;
+
+              return (
+                <div key={`${propertyName}-${index}`} className="funnel-row">
+                  <div className="funnel-meta"><strong>{propertyName}</strong><span>{item.score}%</span></div>
+                  <div className="funnel-track"><span style={{ width: `${item.score}%` }} /></div>
+                </div>
+              );
+            })}
           </div>
         </SectionCard>
 

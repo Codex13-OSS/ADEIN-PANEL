@@ -65,6 +65,29 @@ input, select, textarea { width: 100%; border: 1px solid var(--border-soft); bor
   letter-spacing: 0.06em;
   margin-bottom: .5rem;
 }
+
+
+.sidebar-brand-logo {
+  width: 138px;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  margin: 0 0 .8rem;
+}
+
+.header-brand-logo {
+  width: 68px;
+  height: 68px;
+  border-radius: 14px;
+  object-fit: contain;
+  background: #fff;
+  border: 1px solid var(--border-soft);
+  padding: .2rem;
+  flex-shrink: 0;
+  box-shadow: 0 1px 4px var(--shadow-soft);
+}
+
 .sidebar nav { display: flex; flex-direction: column; gap: .3rem; flex: 1; }
 .sidebar nav button {
   text-align: left;

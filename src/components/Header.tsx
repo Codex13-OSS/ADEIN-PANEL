@@ -7,7 +7,7 @@ function Header({ title, subtitle, role, username, onLogout }: Props) {
   return (
     <header className="app-header">
       <div>
-        <div className="header-icon" aria-label="ADEIN dashboard" role="img">AD</div>
+        <img src="/brand/casitas.png" alt="ADEIN" className="header-brand-logo" onError={(event) => { event.currentTarget.style.display = 'none'; }} />
         <div>
           <h1>{title}</h1>
           <p>{subtitle}</p>
