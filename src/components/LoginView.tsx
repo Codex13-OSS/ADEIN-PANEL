@@ -7,6 +7,9 @@ type Props = {
   onLogin: (username: string, role: Role) => void;
 };
 
+const ALLOWED_USERNAME = 'Isra';
+const ALLOWED_PASSWORD = 'adein123';
+
 function LoginView({ onLogin }: Props) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -14,12 +17,21 @@ function LoginView({ onLogin }: Props) {
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (!username.trim() || !password.trim()) {
+
+    const normalizedUsername = username.trim();
+
+    if (!normalizedUsername || !password.trim()) {
       setError('Ingresa usuario y contraseña.');
       return;
     }
+
+    if (normalizedUsername !== ALLOWED_USERNAME || password !== ALLOWED_PASSWORD) {
+      setError('Usuario o contraseña incorrectos.');
+      return;
+    }
+
     setError('');
-    onLogin(username.trim(), 'owner');
+    onLogin(normalizedUsername, 'owner');
   };
 
   return (
