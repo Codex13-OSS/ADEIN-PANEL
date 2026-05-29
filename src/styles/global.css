@@ -261,3 +261,62 @@ th, td { padding: .8rem; border-bottom: 1px solid var(--border-soft); text-align
   .dashboard-main-grid,
   .dashboard-bottom-grid { grid-template-columns: 1fr; }
 }
+
+.rings-card { display: none; }
+.rings-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .65rem; align-items: start; }
+.ring-item { display: grid; grid-template-areas: 'chart' 'label'; justify-items: center; min-width: 0; position: relative; }
+.ring-svg { grid-area: chart; width: 76px; height: 76px; overflow: visible; }
+.ring-bg,
+.ring-progress { fill: none; stroke-width: 4.5; }
+.ring-bg { stroke: var(--bg-soft); }
+.ring-progress { stroke: var(--accent-green); stroke-dasharray: 100; stroke-linecap: round; transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dashoffset .25s ease; }
+.ring-value { grid-area: chart; align-self: center; justify-self: center; margin-top: -.45rem; font-size: .86rem; line-height: 1; color: var(--text-main); }
+.ring-detail { grid-area: chart; align-self: center; justify-self: center; margin-top: 1.05rem; font-size: .58rem; line-height: 1; color: var(--text-muted); }
+.ring-label { grid-area: label; max-width: 92px; text-align: center; font-size: .68rem; line-height: 1.12; color: var(--text-muted); overflow-wrap: anywhere; }
+
+@media (max-width: 768px) {
+  body { overflow-x: hidden; }
+  .dashboard-premium-grid { width: min(100%, 390px); margin: 0 auto; gap: .58rem; }
+  .dashboard-premium-grid.page-grid { gap: .75rem; }
+  .dashboard-premium-grid .section-card { padding: .78rem; border-radius: 14px; box-shadow: 0 8px 20px rgba(20, 55, 36, 0.07); }
+  .dashboard-premium-grid .section-card header { margin-bottom: .55rem; }
+  .dashboard-premium-grid .section-card header h2 { font-size: .92rem; line-height: 1.15; }
+  .dashboard-premium-grid .section-card header p { margin: .18rem 0 0; font-size: .72rem; line-height: 1.25; }
+  .dashboard-premium-grid .inline-actions { gap: .35rem; }
+  .dashboard-premium-grid .badge { padding: .24rem .55rem; font-size: .68rem; }
+  .dashboard-premium-grid .stats-grid,
+  .dashboard-premium-grid .metrics-top-grid,
+  .dashboard-premium-grid .mini-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .48rem; }
+  .dashboard-premium-grid .stat-card,
+  .dashboard-premium-grid .mini-kpi-grid .stat-card { min-width: 0; min-height: 76px; padding: .68rem .72rem; border-radius: 13px; box-shadow: 0 7px 16px rgba(20, 55, 36, 0.06); }
+  .dashboard-premium-grid .metrics-top-grid .stat-card { min-height: 80px; }
+  .dashboard-premium-grid .stat-card p { margin: 0; font-size: .68rem; line-height: 1.15; }
+  .dashboard-premium-grid .stat-card h3,
+  .dashboard-premium-grid .mini-kpi-grid .stat-card h3 { margin: .18rem 0 .08rem; font-size: 1.42rem; line-height: 1; }
+  .dashboard-premium-grid .stat-card small { font-size: .62rem; line-height: 1.15; }
+  .rings-card { display: block; }
+  .rings-card .section-card { padding: .72rem .7rem .68rem; }
+  .rings-row { gap: .28rem; }
+  .ring-svg { width: 66px; height: 66px; }
+  .ring-bg,
+  .ring-progress { stroke-width: 4.8; }
+  .ring-value { font-size: .78rem; margin-top: -.38rem; }
+  .ring-detail { font-size: .54rem; margin-top: .98rem; }
+  .ring-label { max-width: 78px; font-size: .6rem; }
+  .dashboard-main-grid,
+  .dashboard-bottom-grid { gap: .58rem; }
+  .dashboard-premium-grid .funnel-premium { gap: .5rem; }
+  .dashboard-premium-grid .funnel-row { gap: .24rem; }
+  .dashboard-premium-grid .funnel-meta { font-size: .68rem; }
+  .dashboard-premium-grid .funnel-track { height: 8px; }
+  .dashboard-premium-grid .decision-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .42rem; }
+  .dashboard-premium-grid .decision-card { min-width: 0; padding: .62rem .62rem; border-radius: 12px; border-left-width: 3px; }
+  .dashboard-premium-grid .decision-card h4 { margin: 0 0 .25rem; font-size: .7rem; line-height: 1.15; }
+  .dashboard-premium-grid .decision-card p { margin: 0; font-size: .62rem; line-height: 1.25; }
+  .dashboard-premium-grid .btn-primary { width: 100%; margin-top: .58rem; padding: .72rem .8rem; border-radius: 11px; font-size: .82rem; }
+  .dashboard-premium-grid .muted { font-size: .68rem; line-height: 1.25; }
+  .dashboard-premium-grid .table-premium-wrap { max-width: 100%; margin-top: .68rem; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; }
+  .dashboard-premium-grid .table-premium { min-width: 390px; }
+  .dashboard-premium-grid th,
+  .dashboard-premium-grid td { padding: .52rem .55rem; font-size: .68rem; white-space: nowrap; }
+}
