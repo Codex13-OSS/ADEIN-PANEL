@@ -242,11 +242,14 @@ th, td { padding: .8rem; border-bottom: 1px solid var(--border-soft); text-align
   .login-page .login-card { padding: 24px; }
 }
 
-.metrics-top-grid .stat-card { min-height: 112px; }
+.metrics-top-grid .stat-card { min-height: 98px; }
 .metrics-top-grid .stat-card small { display: block; margin-top: .35rem; }
 .dashboard-premium-grid { gap: 1rem; }
-.dashboard-main-grid { display: grid; grid-template-columns: 1.35fr .85fr; gap: 1rem; align-items: start; }
+.dashboard-main-grid { display: grid; grid-template-columns: .92fr 1.25fr .95fr; gap: 1rem; align-items: stretch; }
 .dashboard-bottom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: start; }
+.dashboard-premium-grid > *,
+.dashboard-main-grid > *,
+.dashboard-bottom-grid > * { min-width: 0; }
 .funnel-premium { display: grid; gap: .7rem; }
 .funnel-row { display: grid; gap: .35rem; }
 .funnel-meta { display: flex; justify-content: space-between; align-items: center; font-size: .82rem; color: var(--text-muted); }
@@ -262,15 +265,16 @@ th, td { padding: .8rem; border-bottom: 1px solid var(--border-soft); text-align
   .dashboard-bottom-grid { grid-template-columns: 1fr; }
 }
 
-.rings-card { display: none; }
+.rings-card { display: block; min-width: 0; }
+.rings-card .section-card { height: 100%; }
 .rings-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .65rem; align-items: start; }
 .ring-item { display: grid; grid-template-areas: 'chart' 'label'; justify-items: center; min-width: 0; position: relative; }
-.ring-svg { grid-area: chart; width: 76px; height: 76px; overflow: visible; }
+.ring-svg { grid-area: chart; width: 82px; height: 82px; overflow: visible; }
 .ring-bg,
 .ring-progress { fill: none; stroke-width: 4.5; }
 .ring-bg { stroke: var(--bg-soft); }
 .ring-progress { stroke: var(--accent-green); stroke-dasharray: 100; stroke-linecap: round; transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dashoffset .25s ease; }
-.ring-value { grid-area: chart; align-self: center; justify-self: center; margin-top: -.45rem; font-size: .86rem; line-height: 1; color: var(--text-main); }
+.ring-value { grid-area: chart; align-self: center; justify-self: center; margin-top: -.45rem; font-size: .92rem; line-height: 1; color: var(--text-main); }
 .ring-detail { grid-area: chart; align-self: center; justify-self: center; margin-top: 1.05rem; font-size: .58rem; line-height: 1; color: var(--text-muted); }
 .ring-label { grid-area: label; max-width: 92px; text-align: center; font-size: .68rem; line-height: 1.12; color: var(--text-muted); overflow-wrap: anywhere; }
 

@@ -134,6 +134,24 @@ function OwnerDashboardPage({ prospects, followups, historyEventsCount = 0, reco
       </div>
 
       <section className="dashboard-main-grid">
+        <div className="rings-card">
+          <SectionCard title="Embudo de conversión" subtitle="Porcentaje por etapa">
+            <div className="rings-row">
+              {conversionRings.map((ring) => (
+                <article key={ring.label} className="ring-item">
+                  <svg className="ring-svg" viewBox="0 0 44 44" aria-hidden="true">
+                    <circle className="ring-bg" cx="22" cy="22" r="18" pathLength="100" />
+                    <circle className="ring-progress" cx="22" cy="22" r="18" pathLength="100" style={{ strokeDashoffset: 100 - ring.value }} />
+                  </svg>
+                  <strong className="ring-value">{ring.value}%</strong>
+                  <span className="ring-detail">{ring.detail}</span>
+                  <span className="ring-label">{ring.label}</span>
+                </article>
+              ))}
+            </div>
+          </SectionCard>
+        </div>
+
         <SectionCard title="Embudo comercial visual" subtitle="Contactos a cierres con datos locales activos.">
           <div className="funnel-premium">
             {funnel.map((step) => (
