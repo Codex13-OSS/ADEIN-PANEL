@@ -12,6 +12,7 @@ const BLOCKED_PATH_SEGMENTS = ['/write', '/commit', '/rollback', '/admin', '/del
 const READONLY_ROUTES = [
   'GET /',
   'GET /assets/*',
+  'GET /brand/*',
   'GET /api/crm/prospect-staging/readonly-snapshot',
   'GET /api/crm/prospect-staging/readonly-evidence',
   'GET /health'
@@ -128,8 +129,12 @@ function buildServer(config) {
     const safePath = normalize(reqPath).replace(/^\/+/, '');
     const distPath = resolve(DIST_DIR, safePath);
     const distAssetsRoot = resolve(DIST_DIR, 'assets');
+    const distBrandRoot = resolve(DIST_DIR, 'brand');
+    const isAllowedStaticFile =
+      (reqPath.startsWith('/assets/') && distPath.startsWith(distAssetsRoot)) ||
+      (reqPath.startsWith('/brand/') && distPath.startsWith(distBrandRoot));
 
-    if (reqPath.startsWith('/assets/') && distPath.startsWith(distAssetsRoot) && fs.existsSync(distPath) && fs.statSync(distPath).isFile()) {
+    if (isAllowedStaticFile && fs.existsSync(distPath) && fs.statSync(distPath).isFile()) {
       const ext = extname(distPath);
       const mime = MIME_TYPES.get(ext) || 'application/octet-stream';
       res.writeHead(200, { 'Content-Type': mime });
