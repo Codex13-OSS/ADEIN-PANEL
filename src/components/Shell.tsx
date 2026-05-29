@@ -165,7 +165,7 @@ function Shell({ session, defaultSection, onLogout }: Props) {
   };
 
   const handleResetCrmDemo = () => {
-    if (typeof window !== 'undefined' && !window.confirm('¿Restablecer CRM demo a datos iniciales?')) return;
+    if (typeof window !== 'undefined' && !window.confirm('¿Restablecer CRM a datos iniciales?')) return;
     clearCrmStorage();
     setProspects(INITIAL_PROSPECTS);
     setFollowups(INITIAL_FOLLOWUPS);

@@ -32,7 +32,6 @@ function App() {
     return (
       <LoginView
         onLogin={(username, role) => {
-          // Mock temporal: sesión visual con sessionStorage. Autenticación real pendiente en próximo PR.
           const nextSession = { username, role };
           sessionStorage.setItem(SESSION_KEY, JSON.stringify(nextSession));
           setSession(nextSession);
