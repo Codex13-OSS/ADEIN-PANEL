@@ -7,7 +7,7 @@ type Props = {
   onLogin: (username: string, role: Role) => void;
 };
 
-const ALLOWED_USERNAME = 'Isra';
+const ALLOWED_USERNAME = 'isra';
 const ALLOWED_PASSWORD = 'adein123';
 
 function LoginView({ onLogin }: Props) {
