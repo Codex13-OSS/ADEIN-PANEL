@@ -1,204 +1,53 @@
-import { useEffect, useMemo, useState } from 'react';
-import DecisionCard from '../components/DecisionCard';
 import SectionCard from '../components/SectionCard';
 import StatCard from '../components/StatCard';
-import { Followup, Prospect, RecommendedAction } from '../types/crm';
-import { useDbSnapshot } from '../context/DbSnapshotContext';
-import { deriveLocalPipelineMetrics } from '../lib/crmPipelineLocal';
-import { fetchProspectStagingReadonlySnapshot } from '../lib/crmProspectStagingReadonlyApiClient';
-import { normalizeProspectStagingReadonlySnapshot, SAFE_STAGING_READONLY_FALLBACK, type StagingReadonlyViewModel } from '../lib/crmProspectStagingReadonlySnapshot';
-import { detectLegacyBrokenHistoricalSalesStore, getHistoricalSalesStore } from '../lib/historicalSalesStorage';
-
-type DataFeedUiState = 'demo_local' | 'live_preview_available';
-
-const READONLY_API_SNAPSHOT_ENDPOINT = (import.meta.env.VITE_CRM_PROSPECT_STAGING_READONLY_SNAPSHOT_URL ?? '').trim();
+import { Prospect } from '../types/crm';
+import { summarizeProspects } from '../lib/crmProspectList.mjs';
+import { buildDashboardCharts } from '../lib/dashboardMetrics.mjs';
 
 type Props = {
   prospects: Prospect[];
-  followups: Followup[];
-  historyEventsCount?: number;
-  recommendedActions: RecommendedAction[];
-  historicalMetrics: ReturnType<typeof import('../lib/historicalMetrics').getHistoricalMetrics>;
-  onOpenWhatsAppAnalysis?: () => void;
 };
 
-function OwnerDashboardPage({ prospects, followups, historyEventsCount = 0, recommendedActions, historicalMetrics, onOpenWhatsAppAnalysis }: Props) {
-  const localMetrics = deriveLocalPipelineMetrics(prospects, followups, []);
-  const { appliedSnapshot } = useDbSnapshot();
-  const readonlyFromAppliedSnapshot = useMemo(() => normalizeProspectStagingReadonlySnapshot(appliedSnapshot), [appliedSnapshot]);
-  const [readonlyFromApi, setReadonlyFromApi] = useState<StagingReadonlyViewModel | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    if (!READONLY_API_SNAPSHOT_ENDPOINT) return () => {
-      active = false;
-    };
-
-    fetchProspectStagingReadonlySnapshot({ endpointUrl: READONLY_API_SNAPSHOT_ENDPOINT, timeoutMs: 1800 }).then((result) => {
-      if (!active) return;
-      const isFallback = result === SAFE_STAGING_READONLY_FALLBACK || result.warnings.includes(SAFE_STAGING_READONLY_FALLBACK.warnings[0]);
-      setReadonlyFromApi(isFallback ? null : result);
-    });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const dataFeedUiState: DataFeedUiState = readonlyFromApi ? 'live_preview_available' : 'demo_local';
-  const dashboardPreview = readonlyFromApi ?? readonlyFromAppliedSnapshot;
-  const hasLocalData = prospects.length > 0 || followups.length > 0 || historyEventsCount > 0;
-
-  const cards = hasLocalData ? {
-    totalProspects: prospects.length,
-    totalConversations: prospects.length,
-    totalAnalyses: prospects.length,
-    totalFollowups: followups.filter((item) => !item.completed).length,
-    totalHistoryEvents: historyEventsCount,
-  } : {
-    totalProspects: dashboardPreview.cards.totalProspects,
-    totalConversations: dashboardPreview.cards.totalConversations,
-    totalAnalyses: dashboardPreview.cards.totalAnalyses,
-    totalFollowups: dashboardPreview.cards.totalFollowups,
-    totalHistoryEvents: dashboardPreview.cards.totalHistoryEvents,
-  };
-
-  const historicalSales = useMemo(() => getHistoricalSalesStore(), []);
-  const brokenLegacyHistorical = detectLegacyBrokenHistoricalSalesStore(historicalSales);
-  const pendingFollowups = followups.filter((item) => !item.completed);
-
-  const funnel = [
-    { label: 'Contactos', value: cards.totalConversations },
-    { label: 'Calificados', value: cards.totalAnalyses },
-    { label: 'Visitas', value: Math.max(0, Math.round(cards.totalAnalyses * 0.5)) },
-    { label: 'Propuestas', value: Math.max(0, Math.round(cards.totalAnalyses * 0.35)) },
-    { label: 'Cierres', value: Math.max(0, Math.round(cards.totalAnalyses * 0.2)) },
-  ];
-  const funnelMax = Math.max(...funnel.map((step) => step.value), 1);
-  const interestedProspects = prospects.length > 0
-    ? prospects.filter((item) => item.status === 'Interesado' || item.status === 'Interesado calificado' || item.status === 'Cita agendada' || item.intentionLevel === 'Alta').length
-    : Math.min(cards.totalProspects, cards.totalAnalyses);
-  const estimatedClosings = Math.min(interestedProspects, funnel.find((step) => step.label === 'Cierres')?.value ?? 0);
-  const toConversionPercent = (from: number, to: number) => Math.max(0, Math.min(100, Math.round((to / Math.max(from, to, 1)) * 100)));
-  const conversionRings = [
-    { label: 'Mensajes → Prospectos', value: toConversionPercent(cards.totalConversations, cards.totalProspects), detail: `${cards.totalProspects}/${Math.max(cards.totalConversations, cards.totalProspects, 1)}` },
-    { label: 'Prospectos → Interesados', value: toConversionPercent(cards.totalProspects, interestedProspects), detail: `${interestedProspects}/${Math.max(cards.totalProspects, interestedProspects, 1)}` },
-    { label: 'Interesados → Cierre', value: toConversionPercent(interestedProspects, estimatedClosings), detail: `${estimatedClosings}/${Math.max(interestedProspects, estimatedClosings, 1)}` },
-  ];
-
-  const recentProspects = prospects.slice(-5).reverse();
-
-  const propertyPerformance = historicalSales && !brokenLegacyHistorical
-    ? historicalSales.summary.topProperties.slice(0, 4).map((item, index) => ({
-      name: item.name,
-      score: Math.max(10, 100 - index * 18),
-    }))
-    : historicalMetrics.properties.slice(0, 4).map((item, index) => ({
-      name: item,
-      score: Math.max(10, 100 - index * 18),
-    }));
+function OwnerDashboardPage({ prospects }: Props) {
+  const summary = summarizeProspects(prospects);
+  const charts = buildDashboardCharts(summary);
+  const attentionList = prospects.filter((item) => item.intentionLevel === 'Alta' || item.status === 'Cita agendada' || item.status === 'Revisión manual').slice(0, 6);
 
   return (
-    <div className="page-grid dashboard-premium-grid">
-      <SectionCard title="Panel comercial ADEIN" subtitle="Vista comercial con CRM local activo e histórico desde Excel.">
-        <div className="inline-actions">
-          <span className="badge badge-success">En operación</span>
-          <span className="badge badge-success">Operación comercial</span>
-          <span className="badge">Datos locales activos</span>
+    <div className="page-grid">
+      <SectionCard title="Dashboard maestro" subtitle="Resumen en tiempo real de los prospectos registrados en el CRM.">
+        <p className="muted">Sin estimaciones ni históricos de navegador. La fuente es el CRM local.</p>
+      </SectionCard>
+      <section className="stats-grid">
+        <StatCard label="Prospectos" value={String(summary.total)} hint="Registros del CRM" />
+        <StatCard label="Alta prioridad" value={String(summary.highPriority)} hint="Requieren atención" />
+        <StatCard label="Citas agendadas" value={String(summary.appointments)} hint="Confirmar y atender" />
+        <StatCard label="Revisión manual" value={String(summary.manualReview)} hint="Información incompleta" />
+      </section>
+      <section className="dashboard-chart-grid" aria-label="Distribución actual del CRM">
+        {charts.map((chart) => {
+          const circumference = 264;
+          const progress = (chart.percentage / 100) * circumference;
+          return (
+            <article className={`dashboard-chart-card dashboard-chart-${chart.tone}`} key={chart.key}>
+              <svg className="dashboard-donut" viewBox="0 0 100 100" role="img" aria-label={`${chart.label}: ${chart.percentage}% de los prospectos`}>
+                <circle className="dashboard-donut-track" cx="50" cy="50" r="42" />
+                <circle className="dashboard-donut-value" cx="50" cy="50" r="42" pathLength="264" strokeDasharray={`${progress} 264`} />
+                <text x="50" y="47" className="dashboard-donut-percent">{chart.percentage}%</text>
+                <text x="50" y="61" className="dashboard-donut-count">{chart.value} prospectos</text>
+              </svg>
+              <div><strong>{chart.label}</strong><span>Del total registrado en CRM</span></div>
+            </article>
+          );
+        })}
+      </section>
+      <SectionCard title="Atender primero" subtitle="Prospectos con prioridad alta, cita o revisión pendiente.">
+        <div className="table-premium-wrap">
+          <table className="table-premium"><thead><tr><th>Prospecto</th><th>Prioridad</th><th>Estatus</th><th>Próxima acción</th></tr></thead>
+            <tbody>{attentionList.length > 0 ? attentionList.map((item) => <tr key={item.id}><td>{item.name}</td><td><span className={`priority-label priority-${item.intentionLevel.toLowerCase()}`}>{item.intentionLevel}</span></td><td>{item.status}</td><td>{item.nextAction}</td></tr>) : <tr><td colSpan={4} className="empty-table-state">Aún no hay prioridades activas en el CRM.</td></tr>}</tbody>
+          </table>
         </div>
       </SectionCard>
-
-      <section className="stats-grid metrics-top-grid">
-        <StatCard label="Clientes actuales" value={String(historicalSales?.summary.currentClients ?? historicalMetrics.totalClients ?? 0)} hint="Histórico desde Excel" accent="#08733B" />
-        <StatCard label="Lotes libres" value={String(historicalSales?.summary.freeLots ?? historicalMetrics.lotsAvailable ?? 0)} hint="Disponibilidad comercial" accent="#7BAA92" />
-        <StatCard label="Prospectos activos" value={String(cards.totalProspects)} hint="CRM local activo" accent="#5D8F76" />
-        <StatCard label="Seguimientos pendientes" value={String(cards.totalFollowups)} hint="Atención del día" accent="#B68A2C" />
-      </section>
-
-      <section className="dashboard-main-grid">
-        <div className="rings-card">
-          <SectionCard title="Embudo de conversión" subtitle="Porcentaje por etapa">
-            <div className="rings-row">
-              {conversionRings.map((ring) => (
-                <article key={ring.label} className="ring-item">
-                  <svg className="ring-svg" viewBox="0 0 44 44" aria-hidden="true">
-                    <circle className="ring-bg" cx="22" cy="22" r="18" pathLength="100" />
-                    <circle className="ring-progress" cx="22" cy="22" r="18" pathLength="100" style={{ strokeDashoffset: 100 - ring.value }} />
-                  </svg>
-                  <strong className="ring-value">{ring.value}%</strong>
-                  <span className="ring-detail">{ring.detail}</span>
-                  <span className="ring-label">{ring.label}</span>
-                </article>
-              ))}
-            </div>
-          </SectionCard>
-        </div>
-
-        <SectionCard title="Embudo comercial visual" subtitle="Contactos a cierres con datos locales activos.">
-          <div className="funnel-premium">
-            {funnel.map((step) => (
-              <div key={step.label} className="funnel-row">
-                <div className="funnel-meta">
-                  <strong>{step.label}</strong>
-                  <span>{step.value}</span>
-                </div>
-                <div className="funnel-track"><span style={{ width: `${Math.max(6, Math.round((step.value / funnelMax) * 100))}%` }} /></div>
-              </div>
-            ))}
-          </div>
-
-          <div className="table-premium-wrap">
-            <table className="table-premium">
-              <thead>
-                <tr><th>Prospecto</th><th>Predio</th><th>Estatus</th></tr>
-              </thead>
-              <tbody>
-                {recentProspects.length > 0 ? recentProspects.map((item) => (
-                  <tr key={item.id}><td>{item.name}</td><td>{item.property}</td><td>{item.status}</td></tr>
-                )) : <tr><td colSpan={3}>Información cargada en este navegador.</td></tr>}
-              </tbody>
-            </table>
-          </div>
-        </SectionCard>
-
-        <SectionCard title="Decisiones del día" subtitle="Prioridades comerciales para ejecutar hoy.">
-          <div className="decision-grid">
-            <DecisionCard level="risk" title="Seguimiento vencido" description={pendingFollowups[0] ? `${pendingFollowups[0].prospectName} · ${pendingFollowups[0].suggestedTime}` : 'Sin seguimientos vencidos en la carga local.'} />
-            <DecisionCard level="opportunity" title="Prospecto listo para cierre" description={localMetrics.highIntentionProspects > 0 ? `${localMetrics.highIntentionProspects} prospectos con alta intención.` : 'Sin prospectos de cierre inmediato.'} />
-            <DecisionCard level="high" title="Actualizar estatus del CRM" description={recommendedActions[0]?.suggestedAction ?? 'Registrar estatus y notas del contacto actual.'} />
-          </div>
-          <button type="button" className="btn-primary" onClick={() => onOpenWhatsAppAnalysis?.()}>Ir a CRM ventas</button>
-          <p className="muted">{dataFeedUiState === 'live_preview_available' ? 'Vista comercial activa.' : 'Información cargada en este navegador.'}</p>
-        </SectionCard>
-      </section>
-
-      <section className="dashboard-bottom-grid">
-        <SectionCard title="Rendimiento de predios" subtitle="Referencia comercial del portafolio activo.">
-          <div className="funnel-premium">
-            {propertyPerformance.map((item, index) => {
-              const propertyName = typeof item.name === 'string' ? item.name : item.name.name;
-
-              return (
-                <div key={`${propertyName}-${index}`} className="funnel-row">
-                  <div className="funnel-meta"><strong>{propertyName}</strong><span>{item.score}%</span></div>
-                  <div className="funnel-track"><span style={{ width: `${item.score}%` }} /></div>
-                </div>
-              );
-            })}
-          </div>
-        </SectionCard>
-
-        <SectionCard title="Histórico comercial" subtitle="Resumen compacto del histórico desde Excel.">
-          {!historicalSales || brokenLegacyHistorical ? <p className="muted">Histórico desde Excel pendiente de recarga.</p> : (
-            <div className="mini-kpi-grid">
-              <StatCard label="Base histórica" value={String(historicalSales.summary.totalRows)} hint="Clientes actuales" />
-              <StatCard label="Con teléfono" value={String(historicalSales.summary.clientsWithPhone)} hint="Contacto válido" />
-              <StatCard label="Lotes libres" value={String(historicalSales.summary.freeLots)} hint="Inventario" />
-              <StatCard label="Predios" value={String(historicalSales.summary.totalProperties ?? historicalSales.summary.topProperties.length)} hint="Cobertura" />
-            </div>
-          )}
-        </SectionCard>
-      </section>
     </div>
   );
 }

@@ -1,233 +1,88 @@
 import { ChangeEvent, useMemo, useState } from 'react';
-import { parseWhatsAppConversation } from '../lib/whatsappParser';
+import { filterProspects, summarizeProspects } from '../lib/crmProspectList.mjs';
 import SectionCard from '../components/SectionCard';
-import { AnalyzedConversation, CrmHistoryEvent, Followup, Prospect, RecommendedAction } from '../types/crm';
+import { Prospect } from '../types/crm';
 
 export type CrmTab = 'prospectos' | 'whatsapp' | 'seguimientos' | 'acciones' | 'historial';
 
 type Props = {
   activeTab?: CrmTab;
   onTabChange?: (tab: CrmTab) => void;
-  role: 'owner' | 'seller';
   prospects: Prospect[];
-  followups: Followup[];
-  recommendedActions: RecommendedAction[];
-  historyEvents: CrmHistoryEvent[];
-  analyzedConversation: AnalyzedConversation;
-  onSaveProspect: (analysis: AnalyzedConversation) => 'created' | 'duplicate';
-  onCreateFollowup: (analysis: AnalyzedConversation) => 'created' | 'duplicate';
-  onCompleteFollowup: (id: string) => void;
-  onResetCrmDemo: () => void;
 };
 
 const TAB_OPTIONS: { key: CrmTab; label: string }[] = [
   { key: 'prospectos', label: 'Prospectos' },
   { key: 'whatsapp', label: 'Analizar WhatsApp' },
-  { key: 'seguimientos', label: 'Seguimientos' },
-  { key: 'acciones', label: 'Acciones recomendadas' },
-  { key: 'historial', label: 'Historial' },
 ];
 
-function CrmPage({ activeTab = 'prospectos', onTabChange, role, prospects, followups, recommendedActions, historyEvents, analyzedConversation, onSaveProspect, onCreateFollowup, onCompleteFollowup, onResetCrmDemo }: Props) {
+export default function CrmPage({ activeTab = 'prospectos', onTabChange, prospects }: Props) {
   const [internalTab, setInternalTab] = useState<CrmTab>(activeTab);
   const [fileName, setFileName] = useState('');
-  const [filePreview, setFilePreview] = useState('');
-  const [fileText, setFileText] = useState('');
-  const [saveFeedback, setSaveFeedback] = useState('');
-  const [followupFeedback, setFollowupFeedback] = useState('');
-  const [copyFeedback, setCopyFeedback] = useState('');
   const [analysisFeedback, setAnalysisFeedback] = useState('');
-  const [lastAnalysisLabel, setLastAnalysisLabel] = useState('Análisis demo');
-  const [pastedText, setPastedText] = useState('');
-  const [currentAnalysis, setCurrentAnalysis] = useState<AnalyzedConversation>(analyzedConversation);
-  const [reviewAnalysis, setReviewAnalysis] = useState<AnalyzedConversation>(analyzedConversation);
-
+  const [prospectQuery, setProspectQuery] = useState('');
+  const [prospectStatus, setProspectStatus] = useState<Prospect['status'] | 'Todos'>('Todos');
+  const [prospectPriority, setProspectPriority] = useState<Prospect['intentionLevel'] | 'Todas'>('Todas');
+  const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null);
+  const [followupKind, setFollowupKind] = useState<'appointment' | 'reminder-1' | 'reminder-3'>('appointment');
+  const [appointmentDate, setAppointmentDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [appointmentTime, setAppointmentTime] = useState('');
   const currentTab = onTabChange ? activeTab : internalTab;
-
-  const handleTabChange = (tab: CrmTab) => {
-    if (onTabChange) {
-      onTabChange(tab);
-      return;
-    }
-    setInternalTab(tab);
-  };
+  const visibleProspects = useMemo(() => filterProspects(prospects, { query: prospectQuery, status: prospectStatus, priority: prospectPriority }), [prospects, prospectPriority, prospectQuery, prospectStatus]);
+  const prospectSummary = useMemo(() => summarizeProspects(prospects), [prospects]);
 
   const handleFile = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.txt')) {
+      setAnalysisFeedback('Sólo se permiten archivos .txt exportados desde WhatsApp.');
+      return;
+    }
     setFileName(file.name);
     const reader = new FileReader();
     reader.onload = () => {
-      const text = String(reader.result ?? '');
-      setFileText(text);
-      setFilePreview(text.split('\n').slice(0, 7).join('\n'));
-      const parsed = parseWhatsAppConversation(text, analyzedConversation);
-      setCurrentAnalysis(parsed);
-      setReviewAnalysis(parsed);
-      setAnalysisFeedback(parsed === analyzedConversation ? 'No se detectó texto válido. Se mantiene análisis demo.' : 'Archivo analizado correctamente.');
-      setLastAnalysisLabel(`Archivo analizado: ${file.name}`);
+      void fetch('http://127.0.0.1:3192/api/local/lead-agent/queue', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ fileName: file.name, content: String(reader.result ?? '') }),
+      }).then(async (response) => {
+        if (!response.ok) throw new Error();
+        const payload = await response.json() as { analysisStarted?: boolean };
+        setAnalysisFeedback(payload.analysisStarted ? 'Analizando ahora. Prospectos se actualizará automáticamente al terminar.' : 'Archivo enviado al subagente local.');
+      }).catch(() => setAnalysisFeedback('No se pudo enviar el archivo al subagente local.'));
     };
     reader.readAsText(file);
   };
 
-  const handleCopyMessage = async () => {
-    const text = reviewAnalysis.suggestedMessage;
+  const saveQuickFollowup = async () => {
+    if (!selectedProspect) return;
+    const appointment = followupKind === 'appointment';
+    const endpoint = appointment ? 'appointment' : 'reminder';
+    const body = appointment ? { date: appointmentDate, time: appointmentTime } : { days: followupKind === 'reminder-1' ? 1 : 3 };
     try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
-        setCopyFeedback('Mensaje copiado.');
-      } else {
-        throw new Error('Clipboard API no disponible');
-      }
+      const response = await fetch(`http://127.0.0.1:3192/api/local/lead-agent/leads/${selectedProspect.id}/${endpoint}`, {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+      });
+      if (!response.ok) throw new Error();
+      setAnalysisFeedback(appointment ? 'Cita guardada.' : 'Recordatorio guardado. No se enviará ningún mensaje automáticamente.');
+      setSelectedProspect(null);
     } catch {
-      const area = document.createElement('textarea');
-      area.value = text;
-      area.style.position = 'fixed';
-      area.style.opacity = '0';
-      document.body.appendChild(area);
-      area.select();
-      document.execCommand('copy');
-      document.body.removeChild(area);
-      setCopyFeedback('Mensaje copiado con fallback.');
+      setAnalysisFeedback('No se pudo guardar el seguimiento.');
     }
   };
 
-  const handleAnalyzeConversation = () => {
-    const pastedInput = pastedText.trim();
-    const fileInput = fileText.trim();
-    const sourceText = pastedInput || fileInput;
-    const parsed = parseWhatsAppConversation(sourceText, analyzedConversation);
-    setCurrentAnalysis(parsed);
-    setReviewAnalysis(parsed);
-    if (parsed === analyzedConversation) {
-      setAnalysisFeedback('No se detectó texto válido. Se mantiene análisis demo.');
-      return;
-    }
-    if (pastedInput) {
-      setAnalysisFeedback('Texto pegado analizado. Datos comerciales listos.');
-      setLastAnalysisLabel('Texto pegado analizado');
-      return;
-    }
-    setAnalysisFeedback('Archivo analizado correctamente.');
-    setLastAnalysisLabel(`Archivo analizado: ${fileName || 'archivo .txt'}`);
-  };
-
-  const updateReviewField = (field: keyof AnalyzedConversation, value: string) => {
-    setReviewAnalysis((current) => ({ ...current, [field]: value }));
-  };
-
-  const tabBody = useMemo(() => {
-    if (currentTab === 'prospectos') {
-      return (
-        <SectionCard title="Prospectos activos" subtitle="Pipeline comercial del equipo de ventas">
-          <div className="controls-row">
-            <input placeholder="Buscar prospecto, predio o estatus" />
-            <select><option>Estatus: Todos</option><option>Nuevo</option><option>Interesado</option><option>Cita agendada</option><option>No responde</option></select>
-            <select><option>Vendedor: Todos</option><option>Vendedor A</option><option>Vendedor B</option></select>
-          </div>
-          <div className="table-premium-wrap">
-            <table className="table-premium"><thead><tr><th>Prospecto</th><th>Predio</th><th>Estatus</th><th>Vendedor</th><th>Último contacto</th><th>Próxima acción</th><th>Acciones</th></tr></thead>
-              <tbody>
-                {prospects.map((prospect) => <tr key={prospect.id}><td>{prospect.name}</td><td>{prospect.property}</td><td><span className="badge">{prospect.status}</span></td><td>{prospect.seller}</td><td>{prospect.lastContact}</td><td>{prospect.nextAction}</td><td><div className="inline-actions"><button className="btn-outline">WhatsApp</button><button className="btn-outline">Seguimiento</button><button className="btn-outline">Detalle</button></div></td></tr>)}
-              </tbody>
-            </table>
-          </div>
-        </SectionCard>
-      );
-    }
-
-    if (currentTab === 'whatsapp') {
-      return (
-        <SectionCard title="Analizar conversación de WhatsApp" subtitle="Fuente de captura de conversaciones: sube el .txt exportado o pega la conversación para convertirla en prospectos y seguimientos.">
-          <label className="dropzone" htmlFor="whatsapp-file">
-            <strong>Sube aquí el archivo .txt exportado desde WhatsApp</strong>
-            <span>Formato permitido: .txt / text/plain</span>
-            <input id="whatsapp-file" type="file" accept=".txt,text/plain" onChange={handleFile} />
-          </label>
-          {fileName ? <p className="file-state"><strong>{fileName}</strong> · Archivo cargado para análisis local.</p> : null}
-          {filePreview ? <pre className="file-preview">{filePreview}</pre> : null}
-          <textarea rows={6} placeholder="Pega aquí la conversación exportada o copiada de WhatsApp…" value={pastedText} onChange={(event) => setPastedText(event.target.value)}></textarea>
-          <button className="btn-primary" onClick={handleAnalyzeConversation}>Analizar conversación cargada</button>
-          {analysisFeedback ? <p className="file-state">{analysisFeedback}</p> : null}
-          {lastAnalysisLabel ? <p className="file-state"><strong>Último análisis:</strong> {lastAnalysisLabel}</p> : null}
-          <div className="analysis-grid">
-            {[
-              ['Nombre detectado', currentAnalysis.name], ['Teléfono detectado', currentAnalysis.phone], ['Predio de interés', currentAnalysis.property],
-              ['Presupuesto aproximado', currentAnalysis.budget], ['Intención', currentAnalysis.intention], ['Objeciones', currentAnalysis.objections],
-              ['Nivel de interés', currentAnalysis.interestLevel], ['Estatus sugerido', currentAnalysis.suggestedStatus], ['Próxima acción', currentAnalysis.nextAction],
-              ['Fecha sugerida de seguimiento', currentAnalysis.suggestedFollowupDate], ['Resumen comercial', currentAnalysis.summary],
-            ].map(([k, v]) => <article key={k} className="analysis-item"><h4>{k}</h4><p>{v}</p></article>)}
-          </div>
-          <article className="assistant-card">
-            <h3>Asistente de seguimiento</h3>
-            <p><strong>Prioridad:</strong> Alta</p>
-            <p><strong>Acción recomendada:</strong> {currentAnalysis.nextAction}</p>
-            <p><strong>Mensaje sugerido:</strong> “{currentAnalysis.suggestedMessage}”</p>
-            <p><strong>Seguimiento recomendado:</strong> {currentAnalysis.suggestedFollowupDate}</p>
-          </article>
-          <article className="assistant-card">
-            <h3>Revisar y completar antes de guardar</h3>
-            <p>Puedes corregir los datos detectados antes de guardarlos en el CRM.</p>
-            <div className="analysis-grid">
-              <label className="analysis-item"><h4>Nombre</h4><input value={reviewAnalysis.name} onChange={(event) => updateReviewField('name', event.target.value)} /></label>
-              <label className="analysis-item"><h4>Teléfono</h4><input value={reviewAnalysis.phone} onChange={(event) => updateReviewField('phone', event.target.value)} /></label>
-              <label className="analysis-item"><h4>Predio de interés</h4><input value={reviewAnalysis.property} onChange={(event) => updateReviewField('property', event.target.value)} /></label>
-              <label className="analysis-item"><h4>Presupuesto aproximado</h4><input value={reviewAnalysis.budget} onChange={(event) => updateReviewField('budget', event.target.value)} /></label>
-              <label className="analysis-item"><h4>Estatus sugerido</h4><input value={reviewAnalysis.suggestedStatus} onChange={(event) => updateReviewField('suggestedStatus', event.target.value)} /></label>
-              <label className="analysis-item"><h4>Próxima acción</h4><input value={reviewAnalysis.nextAction} onChange={(event) => updateReviewField('nextAction', event.target.value)} /></label>
-              <label className="analysis-item"><h4>Fecha de seguimiento</h4><input value={reviewAnalysis.suggestedFollowupDate} onChange={(event) => updateReviewField('suggestedFollowupDate', event.target.value)} /></label>
-              <label className="analysis-item"><h4>Mensaje sugerido</h4><textarea rows={4} value={reviewAnalysis.suggestedMessage} onChange={(event) => updateReviewField('suggestedMessage', event.target.value)} /></label>
-            </div>
-          </article>
-          <div className="inline-actions"><button className="btn-primary" onClick={() => { const result = onSaveProspect(reviewAnalysis); setSaveFeedback(result === 'created' ? 'Prospecto agregado al CRM.' : 'Este prospecto ya existe en CRM.'); }}>Guardar como prospecto</button><button className="btn-outline" onClick={() => { const result = onCreateFollowup(reviewAnalysis); setFollowupFeedback(result === 'created' ? 'Seguimiento agregado.' : 'Seguimiento ya existente.'); }}>Crear seguimiento</button><button className="btn-outline" onClick={handleCopyMessage}>Copiar mensaje sugerido</button></div>
-          {saveFeedback ? <p className="file-state">{saveFeedback}</p> : null}
-          {followupFeedback ? <p className="file-state">{followupFeedback}</p> : null}
-          {copyFeedback ? <p className="file-state">{copyFeedback}</p> : null}
-        </SectionCard>
-      );
-    }
-
-
-    if (currentTab === 'historial') {
-      return (
-        <SectionCard title="Historial CRM" subtitle="Eventos recientes del flujo comercial local">
-          {historyEvents.length === 0 ? <p className="file-state">Sin eventos todavía.</p> : (
-            <div className="analysis-grid">
-              {historyEvents.map((event) => (
-                <article className="analysis-item" key={event.id}>
-                  <h4>{event.title}</h4>
-                  <p><strong>Fecha:</strong> {new Date(event.createdAt).toLocaleString('es-MX')}</p>
-                  <p>{event.description}</p>
-                  {event.prospectName ? <p><strong>Prospecto:</strong> {event.prospectName}</p> : null}
-                  {event.prospectPhone ? <p><strong>Teléfono:</strong> {event.prospectPhone}</p> : null}
-                  {event.property ? <p><strong>Predio:</strong> {event.property}</p> : null}
-                  <p><strong>Origen:</strong> {event.source}</p>
-                </article>
-              ))}
-            </div>
-          )}
-        </SectionCard>
-      );
-    }
-
-    if (currentTab === 'seguimientos') {
-      return <SectionCard title="Seguimientos comerciales" subtitle="Prioriza acciones de hoy para no perder cierres"><div className="analysis-grid">{followups.filter((item) => !item.completed).map((item) => <article className="analysis-item" key={item.id}><h4>{item.state}</h4><p><strong>Prospecto:</strong> {item.prospectName}</p><p><strong>Acción sugerida:</strong> {item.action}</p><p><strong>Hora sugerida:</strong> {item.suggestedTime}</p><p><strong>Prioridad:</strong> {item.priority}</p><button className="btn-outline" onClick={() => onCompleteFollowup(item.id)}>Marcar como realizado</button></article>)}</div></SectionCard>;
-    }
-
-    return <SectionCard title="Acciones recomendadas" subtitle="Motor visual de enfoque comercial diario"><div className="analysis-grid">{recommendedActions.map((item) => <article className="analysis-item" key={item.id}><h4>{item.title}</h4><p><strong>Prioridad:</strong> {item.priority}</p><p><strong>Motivo:</strong> {item.reason}</p><p><strong>Acción sugerida:</strong> {item.suggestedAction}</p><button className="btn-outline">Ejecutar acción mock</button></article>)}</div></SectionCard>;
-  }, [currentTab, fileName, filePreview, prospects, currentAnalysis, reviewAnalysis, saveFeedback, followupFeedback, copyFeedback, followups, onCompleteFollowup, recommendedActions, onCreateFollowup, onSaveProspect, pastedText, analysisFeedback, lastAnalysisLabel, fileText, historyEvents]);
-
-  return (
-    <div className="page-grid">
-      <SectionCard title="CRM de ventas guiado" subtitle={role === 'owner' ? 'Vista administrativa con control por vendedor' : 'Vista vendedor con foco en acción comercial'}>
-        <div className="tabs-row">{TAB_OPTIONS.map((tab) => <button key={tab.key} className={currentTab === tab.key ? 'active' : ''} onClick={() => handleTabChange(tab.key)}>{tab.label}</button>)}</div>
-        <div className="inline-actions">
-          <button className="btn-outline" onClick={onResetCrmDemo}>Restablecer CRM</button>
-        </div>
-      </SectionCard>
-      {tabBody}
-    </div>
-  );
+  return <div className="page-grid">
+    <SectionCard title="CRM comercial" subtitle="Prospectos y análisis autorizado de archivos .txt de WhatsApp.">
+      <div className="tabs-row">{TAB_OPTIONS.map((tab) => <button key={tab.key} className={currentTab === tab.key ? 'active' : ''} onClick={() => onTabChange ? onTabChange(tab.key) : setInternalTab(tab.key)}>{tab.label}</button>)}</div>
+    </SectionCard>
+    {currentTab === 'prospectos' ? <SectionCard title="Prospectos" subtitle="Datos comerciales mínimos registrados por el CRM.">
+      <div className="prospect-summary-grid"><article><span>Total</span><strong>{prospectSummary.total}</strong></article><article><span>Alta prioridad</span><strong>{prospectSummary.highPriority}</strong></article><article><span>Citas</span><strong>{prospectSummary.appointments}</strong></article><article><span>Por revisar</span><strong>{prospectSummary.manualReview}</strong></article></div>
+      <div className="prospect-toolbar"><input value={prospectQuery} onChange={(event) => setProspectQuery(event.target.value)} placeholder="Buscar nombre, teléfono o predio" aria-label="Buscar prospectos" /><select value={prospectStatus} onChange={(event) => setProspectStatus(event.target.value as Prospect['status'] | 'Todos')}><option value="Todos">Todos los estatus</option><option>Nuevo</option><option>Contactado</option><option>Interesado</option><option>Cita agendada</option><option>Venta</option><option>Descartado</option><option>Revisión manual</option></select><select value={prospectPriority} onChange={(event) => setProspectPriority(event.target.value as Prospect['intentionLevel'] | 'Todas')}><option value="Todas">Todas las prioridades</option><option>Alta</option><option>Media</option><option>Baja</option></select></div>
+      <div className="table-premium-wrap"><table className="table-premium prospect-table"><thead><tr><th>Prospecto</th><th>Prioridad</th><th>Predio</th><th>Estatus</th><th>Vendedor</th><th>Próxima acción</th><th></th></tr></thead><tbody>{visibleProspects.length ? visibleProspects.map((prospect) => <tr key={prospect.id}><td><strong>{prospect.name}</strong><small>{prospect.phone}</small></td><td><span className={`priority-label priority-${prospect.intentionLevel.toLowerCase()}`}>{prospect.intentionLevel}</span></td><td>{prospect.property}</td><td>{prospect.status}</td><td>{prospect.seller}</td><td>{prospect.nextAction}</td><td><button className="compact-action" onClick={() => setSelectedProspect(prospect)}>Seguimiento</button></td></tr>) : <tr><td colSpan={7} className="empty-table-state">No hay prospectos que coincidan con estos filtros.</td></tr>}</tbody></table></div>
+      {selectedProspect && <div className="quick-followup" role="region" aria-label="Programar seguimiento"><strong>{selectedProspect.name}</strong><select value={followupKind} onChange={(event) => setFollowupKind(event.target.value as typeof followupKind)}><option value="appointment">Agendar cita</option><option value="reminder-1">Recordar mañana</option><option value="reminder-3">Recordar en 3 días</option></select>{followupKind === 'appointment' && <><input type="date" value={appointmentDate} onChange={(event) => setAppointmentDate(event.target.value)} aria-label="Fecha de cita" /><input type="time" value={appointmentTime} onChange={(event) => setAppointmentTime(event.target.value)} aria-label="Hora de cita opcional" /></>}<button className="primary-action" onClick={saveQuickFollowup}>Guardar</button></div>}
+    </SectionCard> : <SectionCard title="Analizar WhatsApp" subtitle="Carga un .txt exportado. No se muestran ni guardan conversaciones completas en el CRM.">
+      <label className="dropzone" htmlFor="whatsapp-file"><strong>Selecciona el archivo .txt exportado desde WhatsApp</strong><span>El subagente clasificará sólo datos comerciales autorizados.</span><input id="whatsapp-file" type="file" accept=".txt,text/plain" onChange={handleFile} /></label>
+      {fileName && <p className="file-state"><strong>{fileName}</strong> seleccionado.</p>}
+      {analysisFeedback && <p className="file-state" role="status">{analysisFeedback}</p>}
+    </SectionCard>}
+  </div>;
 }
-
-export default CrmPage;

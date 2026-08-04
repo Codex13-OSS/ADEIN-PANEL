@@ -5,27 +5,24 @@ import Header from './Header';
 import OwnerDashboardPage from '../pages/OwnerDashboardPage';
 import CrmPage from '../pages/CrmPage';
 import CurrentBusinessPage from '../pages/CurrentBusinessPage';
-import CampaignsPage from '../pages/CampaignsPage';
-import SellersPage from '../pages/SellersPage';
 import DocumentsPage from '../pages/DocumentsPage';
-import SettingsPage from '../pages/SettingsPage';
-import { getHistoricalMetrics } from '../lib/historicalMetrics';
+
 import { CrmTab } from '../pages/CrmPage';
 import AdeinAnimatedBackground from './AdeinAnimatedBackground';
 import { AnalyzedConversation, CrmHistoryEvent, Followup, Prospect, RecommendedAction } from '../types/crm';
-import { clearCrmStorage, loadCrmStorage, saveCrmStorage } from '../lib/crmStorage';
+
 import { buildFollowupReadinessCandidate, buildProspectReadinessCandidate, hasDuplicateProspectPhone } from '../lib/crmPipelineLocal';
 import { DbSnapshotProvider } from '../context/DbSnapshotContext';
 
-export type OwnerSection = 'dashboard' | 'crm' | 'business' | 'campaigns' | 'sellers' | 'documents' | 'settings';
-export type SellerSection = 'crm' | 'analyze' | 'followups' | 'performance' | 'documents';
+export type OwnerSection = 'dashboard' | 'crm' | 'business' | 'documents';
+export type SellerSection = 'crm' | 'documents';
 
-const crmTabBySection = { crm: 'prospectos', analyze: 'whatsapp', followups: 'seguimientos', performance: 'acciones' } as const;
+const crmTabBySection = { crm: 'prospectos' } as const;
 const sectionByCrmTab: Record<CrmTab, SellerSection> = {
   prospectos: 'crm',
-  whatsapp: 'analyze',
-  seguimientos: 'followups',
-  acciones: 'performance',
+  whatsapp: 'crm',
+  seguimientos: 'crm',
+  acciones: 'crm',
   historial: 'crm',
 };
 
@@ -35,16 +32,6 @@ const MOCK_ANALYSIS: AnalyzedConversation = {
   summary: 'Lead con alta disposición de cierre si se confirma acceso y ubicación.', suggestedMessage: 'Hola, con gusto puedo apoyarle con disponibilidad y ubicación del predio. ¿Le parece si agendamos una visita?',
 };
 
-const INITIAL_PROSPECTS: Prospect[] = [
-  { id: 'prospect-horizonte', name: 'Prospecto Horizonte', phone: '555-0101', property: 'Predio Norte', status: 'Interesado', seller: 'Vendedor A', lastContact: 'Hoy 10:30', nextAction: 'Enviar ubicación', intentionLevel: 'Alta' },
-  { id: 'prospect-alameda', name: 'Prospecto Alameda', phone: '555-0102', property: 'Predio Sur', status: 'Cita agendada', seller: 'Vendedor B', lastContact: 'Ayer 17:15', nextAction: 'Confirmar visita', intentionLevel: 'Media' },
-];
-
-const INITIAL_FOLLOWUPS: Followup[] = [
-  { id: 'followup-horizonte', state: 'Pendiente de hoy', prospectName: 'Prospecto Horizonte', action: 'Enviar ubicación y rango de precios', suggestedTime: '11:30 AM', priority: 'Alta', completed: false },
-  { id: 'followup-alameda', state: 'Vencido', prospectName: 'Prospecto Alameda', action: 'Confirmar visita programada', suggestedTime: 'Ayer 6:00 PM', priority: 'Alta', completed: false },
-  { id: 'followup-bosques', state: 'Próximo', prospectName: 'Prospecto Bosques', action: 'Llamada de validación de presupuesto', suggestedTime: 'Mañana 10:00 AM', priority: 'Media', completed: false },
-];
 
 type Props = {
   session: { role: Role; username: string };
@@ -57,10 +44,9 @@ function Shell({ session, defaultSection, onLogout }: Props) {
   const initialCrmTab = defaultSection in crmTabBySection ? crmTabBySection[defaultSection as keyof typeof crmTabBySection] : 'prospectos';
   const [activeSection, setActiveSection] = useState<OwnerSection | SellerSection>(defaultSection);
   const [activeCrmTab, setActiveCrmTab] = useState<CrmTab>(initialCrmTab);
-  const [crmState] = useState(() => loadCrmStorage({ prospects: INITIAL_PROSPECTS, followups: INITIAL_FOLLOWUPS, historyEvents: [] }));
-  const [prospects, setProspects] = useState<Prospect[]>(crmState.prospects);
-  const [followups, setFollowups] = useState<Followup[]>(crmState.followups);
-  const [historyEvents, setHistoryEvents] = useState<CrmHistoryEvent[]>(crmState.historyEvents);
+  const [prospects, setProspects] = useState<Prospect[]>([]);
+  const [followups, setFollowups] = useState<Followup[]>([]);
+  const [historyEvents, setHistoryEvents] = useState<CrmHistoryEvent[]>([]);
 
   const recommendedActions = useMemo<RecommendedAction[]>(() => {
     const pendingFollowups = followups.filter((item) => !item.completed);
@@ -74,8 +60,24 @@ function Shell({ session, defaultSection, onLogout }: Props) {
 
 
   useEffect(() => {
-    saveCrmStorage({ prospects, followups, historyEvents });
-  }, [prospects, followups, historyEvents]);
+    let active = true;
+    const refreshAgentLeads = async () => {
+      try {
+        const response = await fetch('http://127.0.0.1:3192/api/local/lead-agent/leads');
+        if (!response.ok) return;
+        const payload = await response.json() as { ok?: boolean; leads?: Prospect[] };
+        if (active && payload.ok && Array.isArray(payload.leads)) setProspects(payload.leads);
+      } catch {
+        // El CRM conserva su estado local si el puente del subagente no está activo.
+      }
+    };
+    void refreshAgentLeads();
+    const interval = window.setInterval(() => { void refreshAgentLeads(); }, 5000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, []);
 
 
 
@@ -165,12 +167,19 @@ function Shell({ session, defaultSection, onLogout }: Props) {
   };
 
   const handleResetCrmDemo = () => {
-    if (typeof window !== 'undefined' && !window.confirm('¿Restablecer CRM a datos iniciales?')) return;
-    clearCrmStorage();
-    setProspects(INITIAL_PROSPECTS);
-    setFollowups(INITIAL_FOLLOWUPS);
+    if (typeof window !== 'undefined' && !window.confirm('¿Limpiar datos temporales de esta sesión?')) return;
+    setProspects([]);
+    setFollowups([]);
     setHistoryEvents([]);
   };
+
+  void MOCK_ANALYSIS;
+  void historyEvents;
+  void recommendedActions;
+  void handleSaveProspect;
+  void handleCreateFollowup;
+  void handleCompleteFollowup;
+  void handleResetCrmDemo;
 
   const handleSectionChange = (nextSection: OwnerSection | SellerSection) => {
     if (!isSeller) {
@@ -191,27 +200,21 @@ function Shell({ session, defaultSection, onLogout }: Props) {
     }
   };
   const title = useMemo(() => ({
-    dashboard: 'Dashboard maestro', crm: 'CRM ventas', business: 'Negocio actual', campaigns: 'Campañas', sellers: 'Vendedores',
-    documents: 'Documentos', settings: 'Configuración', analyze: 'Analizar WhatsApp', followups: 'Mis seguimientos', performance: 'Acciones recomendadas',
+    dashboard: 'Dashboard maestro', crm: 'CRM ventas', business: 'Negocio actual',
+    documents: 'Documentos',
   }[section]), [section]);
 
   const subtitle = useMemo(() => ({
     dashboard: 'Centro de decisiones comerciales del día', crm: 'Pipeline y operación comercial guiada', business: 'Estado operativo del predio actual',
-    campaigns: 'Monitoreo visual de campañas activas', sellers: 'Gestión de equipo comercial', documents: 'Plataforma documental separada',
-    settings: 'Parámetros generales del panel', analyze: 'Extracción comercial local desde conversaciones', followups: 'Agenda de acciones por prioridad',
-    performance: 'Recomendaciones ejecutivas para vendedores',
+    documents: 'Generador documental integrado',
   }[section]), [section]);
 
-  const historicalMetrics = useMemo(() => getHistoricalMetrics(), []);
-
   const renderPage = () => {
-    if (section === 'dashboard') return <OwnerDashboardPage prospects={prospects} followups={followups} historyEventsCount={historyEvents.length} recommendedActions={recommendedActions} historicalMetrics={historicalMetrics} onOpenWhatsAppAnalysis={() => { setActiveSection('crm'); setActiveCrmTab('whatsapp'); }} />;
-    if (section === 'crm' || section === 'analyze' || section === 'followups' || section === 'performance') return <CrmPage role={session.role} activeTab={activeCrmTab} onTabChange={setActiveCrmTab} prospects={prospects} followups={followups} historyEvents={historyEvents} recommendedActions={recommendedActions} analyzedConversation={MOCK_ANALYSIS} onSaveProspect={handleSaveProspect} onCreateFollowup={handleCreateFollowup} onCompleteFollowup={handleCompleteFollowup} onResetCrmDemo={handleResetCrmDemo} />;
-    if (section === 'business') return <CurrentBusinessPage historicalMetrics={historicalMetrics} />;
-    if (section === 'campaigns') return <CampaignsPage historicalMetrics={historicalMetrics} />;
-    if (section === 'sellers') return <SellersPage historicalMetrics={historicalMetrics} />;
+    if (section === 'dashboard') return <OwnerDashboardPage prospects={prospects} />;
+    if (section === 'crm') return <CrmPage activeTab={activeCrmTab} onTabChange={setActiveCrmTab} prospects={prospects} />;
+    if (section === 'business') return <CurrentBusinessPage prospects={prospects} />;
     if (section === 'documents') return <DocumentsPage />;
-    return <SettingsPage />;
+    return <CrmPage activeTab={activeCrmTab} onTabChange={setActiveCrmTab} prospects={prospects} />;
   };
 
   return (
@@ -219,7 +222,7 @@ function Shell({ session, defaultSection, onLogout }: Props) {
       <AdeinAnimatedBackground variant="panel" />
       <Sidebar role={session.role} current={activeSection} activeCrmTab={activeCrmTab} onChange={handleSectionChange} />
       <section className="main-panel">
-        <Header role={session.role} title={title} subtitle={subtitle} onLogout={onLogout} />
+        <Header role={session.role} title={title} subtitle={subtitle} onLogout={onLogout} showLogout={section !== 'documents'} />
         <DbSnapshotProvider>{renderPage()}</DbSnapshotProvider>
       </section>
     </main>

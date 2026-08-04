@@ -3,7 +3,7 @@ export type Prospect = {
   name: string;
   phone: string;
   property: string;
-  status: 'Nuevo' | 'Interesado' | 'Cita agendada' | 'No responde' | 'Interesado calificado';
+  status: 'Nuevo' | 'Contactado' | 'Interesado' | 'Cita agendada' | 'Venta' | 'Descartado' | 'Revisión manual' | 'No responde' | 'Interesado calificado';
   seller: string;
   lastContact: string;
   nextAction: string;

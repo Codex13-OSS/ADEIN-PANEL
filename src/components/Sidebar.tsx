@@ -10,17 +10,11 @@ const ownerNav: NavItem[] = [
   { key: 'dashboard', label: 'Dashboard maestro' },
   { key: 'crm', label: 'CRM ventas' },
   { key: 'business', label: 'Negocio actual' },
-  { key: 'campaigns', label: 'Campañas' },
-  { key: 'sellers', label: 'Vendedores' },
   { key: 'documents', label: 'Documentos' },
-  { key: 'settings', label: 'Configuración' },
 ];
 
 const sellerNav: NavItem[] = [
   { key: 'crm', label: 'Prospectos' },
-  { key: 'analyze', label: 'Analizar WhatsApp' },
-  { key: 'followups', label: 'Seguimientos' },
-  { key: 'performance', label: 'Acciones recomendadas' },
   { key: 'documents', label: 'Documentos' },
 ];
 
@@ -28,9 +22,9 @@ type Props = { role: Role; current: AnySection; onChange: (section: AnySection) 
 
 const sellerSectionByTab: Record<CrmTab, SellerSection> = {
   prospectos: 'crm',
-  whatsapp: 'analyze',
-  seguimientos: 'followups',
-  acciones: 'performance',
+  whatsapp: 'crm',
+  seguimientos: 'crm',
+  acciones: 'crm',
   historial: 'crm',
 };
 

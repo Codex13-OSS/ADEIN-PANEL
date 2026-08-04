@@ -1,14 +1,25 @@
-import SectionCard from '../components/SectionCard';
-
-const DOCUMENTS_URL = 'http://38.242.222.25:3003';
+import { useEffect, useState } from 'react';
+import { requestLiaLaunch } from '../lib/liaDocumentsClient.mjs';
 
 export default function DocumentsPage() {
+  const [launchUrl, setLaunchUrl] = useState('');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    void requestLiaLaunch().then((url) => {
+      if (active) setLaunchUrl(url);
+    }).catch((requestError) => {
+      if (active) setError(requestError instanceof Error ? requestError.message : 'No fue posible cargar el generador documental local.');
+    });
+    return () => { active = false; };
+  }, []);
+
   return (
-    <div className="page-grid">
-      <SectionCard title="Sistema documental externo">
-        <p>El sistema documental se mantiene separado para proteger contratos, pagarés, PDFs, QR, folios e impresión.</p>
-        <button className="btn-primary" onClick={() => window.open(DOCUMENTS_URL, '_blank')}>Abrir generador de documentos</button>
-      </SectionCard>
+    <div className="documents-generator-panel">
+      {launchUrl && <iframe className="documents-generator-frame" title="Generador de documentos LIA" src={launchUrl} />}
+      {!launchUrl && !error && <p className="file-state" role="status">Cargando generador documental…</p>}
+      {error && <p className="file-state error" role="alert">{error}</p>}
     </div>
   );
 }
