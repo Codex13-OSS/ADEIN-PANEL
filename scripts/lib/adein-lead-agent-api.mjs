@@ -28,10 +28,12 @@ const readJson = (req) => new Promise((resolve, reject) => {
 export function createLeadAgentApiServer({
   saveIngestion,
   listLeads = async () => [],
+  listAppointments = async () => [],
   queueTxt = async () => { throw new Error('Cola de archivos no configurada'); },
   triggerImmediateAnalysis = async () => {},
   saveAppointment = async () => { throw new Error('Citas no configuradas'); },
   saveReminder = async () => { throw new Error('Recordatorios no configurados'); },
+  completeAppointment = async () => { throw new Error('Citas no configuradas'); },
   issueLiaHandoff = async () => { throw new Error('Enlace LIA no configurado'); },
 }) {
   return http.createServer(async (req, res) => {
@@ -41,6 +43,9 @@ export function createLeadAgentApiServer({
     }
     if (req.method === 'GET' && req.url === '/api/local/lead-agent/leads') {
       return json(res, 200, { ok: true, leads: await listLeads() });
+    }
+    if (req.method === 'GET' && req.url === '/api/local/lead-agent/appointments') {
+      return json(res, 200, { ok: true, appointments: await listAppointments() });
     }
     if (req.method === 'GET' && req.url === '/api/local/lia/handoff') {
       try {
@@ -64,8 +69,16 @@ export function createLeadAgentApiServer({
       try {
         const input = await readJson(req);
         const leadId = leadAction[1];
-        if (leadAction[2] === 'appointment') return json(res, 201, await saveAppointment({ leadId, date: input.date, time: input.time }));
+        if (leadAction[2] === 'appointment') return json(res, 201, await saveAppointment({ leadId, buyerName: input.buyerName, date: input.date, time: input.time }));
         return json(res, 201, await saveReminder({ leadId, days: input.days }));
+      } catch (error) {
+        return json(res, 400, { ok: false, error: error.message });
+      }
+    }
+    const completionRoute = req.url?.match(/^\/api\/local\/lead-agent\/appointments\/([^/]+)\/complete$/);
+    if (req.method === 'POST' && completionRoute) {
+      try {
+        return json(res, 200, await completeAppointment({ appointmentId: completionRoute[1] }));
       } catch (error) {
         return json(res, 400, { ok: false, error: error.message });
       }

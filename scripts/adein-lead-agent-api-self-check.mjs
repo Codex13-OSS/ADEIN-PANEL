@@ -7,12 +7,14 @@ let queuedFile = null;
 let triggeredSourceRef = null;
 let savedAppointment = null;
 let savedReminder = null;
+let completedAppointmentId = null;
 const server = createLeadAgentApiServer({
   saveIngestion: async (record) => {
     savedRecord = record;
     return { leadId: 41, action: 'created' };
   },
   listLeads: async () => [{ id: '41', name: 'Prospecto de prueba', status: 'Nuevo' }],
+  listAppointments: async () => [{ id: '9', leadId: '41', buyerName: 'Comprador registrado', date: '2026-08-05', time: '10:30', property: 'Terreno norte', status: 'Agendada' }],
   queueTxt: async (file) => {
     queuedFile = file;
     return { sourceRef: 'queued-chat.txt' };
@@ -20,6 +22,7 @@ const server = createLeadAgentApiServer({
   triggerImmediateAnalysis: async ({ sourceRef }) => { triggeredSourceRef = sourceRef; },
   saveAppointment: async (input) => { savedAppointment = input; return { ok: true }; },
   saveReminder: async (input) => { savedReminder = input; return { ok: true, followupAt: '2026-08-05' }; },
+  completeAppointment: async ({ appointmentId }) => { completedAppointmentId = appointmentId; return { ok: true }; },
   issueLiaHandoff: async () => 'http://127.0.0.1:3002/api/auth/handoff?token=synthetic-token',
 });
 
@@ -39,6 +42,9 @@ const leads = await fetch(`http://127.0.0.1:${port}/api/local/lead-agent/leads`)
 assert.equal(leads.status, 200);
 assert.deepEqual(await leads.json(), { ok: true, leads: [{ id: '41', name: 'Prospecto de prueba', status: 'Nuevo' }] });
 
+const appointments = await fetch(`http://127.0.0.1:${port}/api/local/lead-agent/appointments`);
+assert.deepEqual(await appointments.json(), { ok: true, appointments: [{ id: '9', leadId: '41', buyerName: 'Comprador registrado', date: '2026-08-05', time: '10:30', property: 'Terreno norte', status: 'Agendada' }] });
+
 const queued = await fetch(`http://127.0.0.1:${port}/api/local/lead-agent/queue`, {
   method: 'POST',
   headers: { 'content-type': 'application/json' },
@@ -50,10 +56,14 @@ assert.deepEqual(queuedFile, { fileName: 'chat-exportado.txt', content: 'Conteni
 assert.equal(triggeredSourceRef, 'queued-chat.txt');
 
 const appointment = await fetch(`http://127.0.0.1:${port}/api/local/lead-agent/leads/41/appointment`, {
-  method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ date: '2026-08-05', time: '10:30' }),
+  method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ buyerName: 'Comprador confirmado', date: '2026-08-05', time: '10:30' }),
 });
 assert.deepEqual(await appointment.json(), { ok: true });
-assert.deepEqual(savedAppointment, { leadId: '41', date: '2026-08-05', time: '10:30' });
+assert.deepEqual(savedAppointment, { leadId: '41', buyerName: 'Comprador confirmado', date: '2026-08-05', time: '10:30' });
+
+const completedAppointment = await fetch(`http://127.0.0.1:${port}/api/local/lead-agent/appointments/9/complete`, { method: 'POST' });
+assert.deepEqual(await completedAppointment.json(), { ok: true });
+assert.equal(completedAppointmentId, '9');
 
 const reminder = await fetch(`http://127.0.0.1:${port}/api/local/lead-agent/leads/41/reminder`, {
   method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ days: 1 }),

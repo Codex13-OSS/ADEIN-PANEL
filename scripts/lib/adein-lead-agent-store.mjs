@@ -34,6 +34,14 @@ export function createMariaDbLeadRepository(connection) {
         intentionLevel: row.priority,
       }));
     },
+    async listAppointments() {
+      const [rows] = await connection.query(
+        `SELECT a.id, a.lead_id, l.name, a.appointment_date, a.appointment_time, a.property_interest, a.status
+         FROM adein_lead_appointments a JOIN adein_leads l ON l.id = a.lead_id
+         ORDER BY a.appointment_date ASC, a.appointment_time ASC, a.id ASC`,
+      );
+      return rows.map((row) => ({ id: String(row.id), leadId: String(row.lead_id), buyerName: row.name, date: String(row.appointment_date).slice(0, 10), time: row.appointment_time ? String(row.appointment_time).slice(0, 5) : '', property: row.property_interest, status: row.status }));
+    },
     async saveIngestion(record) {
       const { lead, appointment, sourceRef } = record;
       await connection.beginTransaction();
@@ -97,14 +105,16 @@ export function createMariaDbLeadRepository(connection) {
         throw error;
       }
     },
-    async saveAppointment({ leadId, date, time }) {
+    async saveAppointment({ leadId, buyerName, date, time }) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date))) throw new Error('Fecha de cita inválida');
       if (time && !/^\d{2}:\d{2}$/.test(String(time))) throw new Error('Hora de cita inválida');
+      const name = String(buyerName ?? '').trim();
+      if (!name) throw new Error('Nombre del comprador requerido');
       await connection.beginTransaction();
       try {
         const [updated] = await connection.query(
-          `UPDATE adein_leads SET status = 'Cita agendada', next_action = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-          [`Confirmar cita el ${date}${time ? ` a las ${time}` : ''}.`, leadId],
+          `UPDATE adein_leads SET name = ?, status = 'Cita agendada', next_action = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+          [name, `Confirmar cita el ${date}${time ? ` a las ${time}` : ''}.`, leadId],
         );
         if (updated.affectedRows !== 1) throw new Error('Prospecto no encontrado');
         await connection.query(
@@ -131,6 +141,20 @@ export function createMariaDbLeadRepository(connection) {
       );
       if (updated.affectedRows !== 1) throw new Error('Prospecto no encontrado');
       return { ok: true, followupAt: date };
+    },
+    async completeAppointment({ appointmentId }) {
+      await connection.beginTransaction();
+      try {
+        const [rows] = await connection.query('SELECT lead_id FROM adein_lead_appointments WHERE id = ?', [appointmentId]);
+        if (rows.length !== 1) throw new Error('Cita no encontrada');
+        await connection.query("UPDATE adein_lead_appointments SET status = 'Realizada' WHERE id = ?", [appointmentId]);
+        await connection.query("UPDATE adein_leads SET next_action = 'Registrar resultado de la cita.', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [rows[0].lead_id]);
+        await connection.commit();
+        return { ok: true };
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      }
     },
   };
 }

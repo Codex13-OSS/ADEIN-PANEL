@@ -21,6 +21,7 @@ const liaHandoffSecret = await loadLiaHandoffSecret(liaSecretFile);
 const server = createLeadAgentApiServer({
   saveIngestion: repository.saveIngestion,
   listLeads: repository.listLeads,
+  listAppointments: repository.listAppointments,
   queueTxt: createWhatsappQueue(`${process.env.HOME}/.agentes-si-data/adein/whatsapp/entrada`),
   triggerImmediateAnalysis: async () => {
     const child = spawn('hermes', ['cron', 'run', classifierJobId], { detached: true, stdio: 'ignore' });
@@ -28,6 +29,7 @@ const server = createLeadAgentApiServer({
   },
   saveAppointment: repository.saveAppointment,
   saveReminder: repository.saveReminder,
+  completeAppointment: repository.completeAppointment,
   issueLiaHandoff: async () => buildLiaLaunchUrl({
     liaBaseUrl,
     token: issueLiaHandoff({ secret: liaHandoffSecret }).token,
