@@ -276,10 +276,22 @@ th, td { padding: .8rem; border-bottom: 1px solid var(--border-soft); text-align
 .login-error { color: #b42318; font-size: .9rem; text-align: center; min-height: 1.5em; margin-top: 16px; padding: 8px 12px; background: rgba(180,35,24,.06); border-radius: 8px; border: 1px solid rgba(180,35,24,.15); }
 .login-error:empty { display:none; }
 
-@media (max-width: 768px) { .login-logo { width: 320px; } }
+/* ─── Login responsive ─── */
+@media (max-width: 768px) {
+  .login-page { padding: 20px; overflow-x: hidden; }
+  .login-logo { width: min(300px, 80vw); }
+  .login-page .login-card { padding: 28px 24px; }
+  .login-page .login-form { gap: 16px; }
+  .login-button { width: 100%; }
+}
 @media (max-width: 480px) {
-  .login-logo { width: 240px; }
-  .login-page .login-card { padding: 24px; }
+  .login-page { padding: 16px; }
+  .login-logo { width: min(220px, 75vw); }
+  .login-page .login-card { padding: 24px 18px; }
+  .login-page .login-card h2 { font-size: 1rem; margin-bottom: 18px; }
+  .login-field input { padding: 12px 14px; font-size: 0.95rem; }
+  .login-button { padding: 14px 16px; font-size: 0.95rem; }
+  .login-error { font-size: 0.82rem; padding: 6px 10px; margin-top: 12px; }
 }
 
 .metrics-top-grid .stat-card { min-height: 98px; }
