@@ -1,3 +1,4 @@
-export const IMPORT_DEMO_SAMPLE = `Cliente\tTeléfono 1\tTeléfono 2\tTeléfono original\tPredio\tLT\tLote\tMZ\tManzana\tNum\tCosto lote\tValor letra\tÚltima letra pagada\tMes en curso\tIntereses\tDirección\tObservaciones\tVendedor\tResponsable seguimiento\tFecha de pago\tFecha de contrato\tEstatus\tPróximo seguimiento\tNotas seguimiento
-Cliente Demo Uno\t55 0000 0000\t\t55 0000 0000\tPredio Demo Norte\tLT\tLote 01\tMZ\tManzana 1\t01\t250000\t5000\t12\tMayo\t0\tCalle Demo Norte\tInteresado en visita\tVendedor A\tVendedor A\t2026-05-10\t2026-03-01\tInteresado\t2026-05-25\tLlamar después de las 5 PM
-Cliente Demo Dos\t\t\t\tPredio Demo Sur\tLT\tLote 02\tMZ\tManzana 2\t02\t300000\t6000\t\tMayo\t200\tCalle Demo Sur\tFalta documentación\tVendedor B\tVendedor B\t\t2026-04-15\tSeguimiento\t\tSolicitar INE en próxima llamada`;
+// Muestra demo vacía — lista para datos reales.
+// Anteriormente contenía datos mock de clientes, predios y vendedores de ejemplo.
+// El importador y el self-check siguen funcionando con datos reales desde textarea.
+export const IMPORT_DEMO_SAMPLE = '';

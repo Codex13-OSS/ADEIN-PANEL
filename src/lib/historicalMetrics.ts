@@ -2,7 +2,7 @@ import { historicalFixtures } from '../data/historicalFixtures';
 
 const toDate = (value: string) => new Date(`${value}T00:00:00.000Z`);
 
-export function getHistoricalMetrics(referenceDate = new Date('2026-05-21T12:00:00.000Z')) {
+export function getHistoricalMetrics(referenceDate = new Date()) {
   const { clients, lots, contracts, paymentSchedule, collectionStatus, sellers } = historicalFixtures;
   const start = new Date(referenceDate);
   start.setUTCHours(0, 0, 0, 0);
@@ -26,7 +26,7 @@ export function getHistoricalMetrics(referenceDate = new Date('2026-05-21T12:00:
       assignedClients,
       pendingFollowups: riskCount + 1,
       collectionAtRisk: riskCount,
-      lastActivity: seller.id === 'seller-a' ? 'Hoy 09:40' : 'Hoy 09:05',
+      lastActivity: 'Sin actividad reciente',
     };
   });
 
