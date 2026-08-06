@@ -2,7 +2,7 @@ import { historicalFixtures } from '../data/historicalFixtures';
 
 const toDate = (value: string) => new Date(`${value}T00:00:00.000Z`);
 
-export function getHistoricalMetrics(referenceDate = new Date('2026-05-21T12:00:00.000Z')) {
+export function getHistoricalMetrics(referenceDate = new Date()) {
   const { clients, lots, contracts, paymentSchedule, collectionStatus, sellers } = historicalFixtures;
   const start = new Date(referenceDate);
   start.setUTCHours(0, 0, 0, 0);
