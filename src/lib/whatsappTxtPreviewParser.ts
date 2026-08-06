@@ -49,7 +49,7 @@ export function parseWhatsappTxtPreview(text: string): WhatsappTxtPreviewResult 
     previewProspects: hasInterest
       ? [
           {
-            name: 'Prospecto Demo Cedros',
+            name: 'Prospecto detectado',
             interest: combinedText.includes('lote') ? 'lote' : 'terreno',
             temperature: hasStrongIntent ? 'alta' : 'media',
             nextAction: hasStrongIntent
@@ -59,7 +59,7 @@ export function parseWhatsappTxtPreview(text: string): WhatsappTxtPreviewResult 
         ]
       : [],
     suggestedFollowups: hasStrongIntent
-      ? ['Confirmar horario de cita por WhatsApp.', 'Enviar resumen comercial de opciones demo en Cedros.']
+      ? ['Confirmar horario de cita por WhatsApp.', 'Enviar resumen comercial de opciones en Cedros.']
       : ['Solicitar mayor contexto de necesidad y presupuesto.'],
     warnings: [
       'Vista previa con conversación simulada.',
