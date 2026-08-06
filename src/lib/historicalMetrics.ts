@@ -26,7 +26,7 @@ export function getHistoricalMetrics(referenceDate = new Date()) {
       assignedClients,
       pendingFollowups: riskCount + 1,
       collectionAtRisk: riskCount,
-      lastActivity: seller.id === 'seller-a' ? 'Hoy 09:40' : 'Hoy 09:05',
+      lastActivity: 'Sin actividad reciente',
     };
   });
 
