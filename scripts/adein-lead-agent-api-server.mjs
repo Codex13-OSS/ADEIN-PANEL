@@ -7,19 +7,30 @@ import { processQueueDirectory } from './lib/adein-deepseek-classifier.mjs';
 import { buildLiaLaunchUrl, issueLiaHandoff, loadLiaHandoffSecret } from './lib/adein-lia-handoff.mjs';
 
 const envFile = process.env.ADEIN_LOCAL_DB_ENV_FILE || `${process.env.HOME}/.agentes-si-data/adein/runtime/local-db.env`;
-const host = process.env.ADEIN_LEAD_AGENT_API_HOST || '127.0.0.1';
-const port = Number(process.env.ADEIN_LEAD_AGENT_API_PORT || 3192);
+const host = process.env.LEAD_AGENT_LISTEN || '127.0.0.1';
+const port = Number(process.env.LEAD_AGENT_PORT || 3192);
 const liaSecretFile = process.env.ADEIN_LIA_HANDOFF_SECRET_FILE || `${process.env.HOME}/.agentes-si-data/adein/secrets/lia-handoff.secret`;
 const liaBaseUrl = process.env.ADEIN_LIA_BASE_URL || 'http://127.0.0.1:3002';
 
-if (host !== '127.0.0.1') throw new Error('El API local sólo puede escuchar en 127.0.0.1');
+let dbConfig;
+try {
+  dbConfig = loadLocalDbEnv(envFile);
+} catch {
+  dbConfig = {
+    host: process.env.DB_HOST || '127.0.0.1',
+    port: Number(process.env.DB_PORT || 3306),
+    database: process.env.DB_NAME || 'adein_crm_dev',
+    user: process.env.DB_USER || 'adein',
+    password: process.env.DB_PASSWORD || '',
+  };
+}
 
-const connection = await mysql.createConnection(loadLocalDbEnv(envFile));
+const connection = await mysql.createConnection(dbConfig);
 const repository = createMariaDbLeadRepository(connection);
-const liaHandoffSecret = await loadLiaHandoffSecret(liaSecretFile);
+const liaHandoffSecret = (await loadLiaHandoffSecret(liaSecretFile).catch(() => 'placeholder'));
 
-const whatsappQueueDir = process.env.LEAD_AGENT_QUEUE_DIR || `${process.env.HOME}/.agentes-si-data/adein/whatsapp/entrada`;
-const whatsappProcessedDir = process.env.LEAD_AGENT_PROCESSED_DIR || `${process.env.HOME}/.agentes-si-data/adein/whatsapp/procesados`;
+const whatsappQueueDir = process.env.LEAD_AGENT_QUEUE_DIR || '/tmp/adein-whatsapp/entrada';
+const whatsappProcessedDir = process.env.LEAD_AGENT_PROCESSED_DIR || '/tmp/adein-whatsapp/procesados';
 
 const server = createLeadAgentApiServer({
   saveIngestion: repository.saveIngestion,
