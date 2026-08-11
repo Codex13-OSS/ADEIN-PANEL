@@ -33,6 +33,8 @@ export default function CrmPage({ activeTab = 'prospectos', onTabChange, prospec
   const [appointmentTime, setAppointmentTime] = useState('');
   const [buyerName, setBuyerName] = useState('');
   const [appointments, setAppointments] = useState<{ id: string; leadId: string; buyerName: string; date: string; time: string; property: string; status: string }[]>([]);
+  const [analyzedLead, setAnalyzedLead] = useState<Prospect | null>(null);
+  const [analysisSteps, setAnalysisSteps] = useState<string[]>([]);
   const currentTab = onTabChange ? activeTab : internalTab;
   const visibleProspects = useMemo(() => filterProspects(prospects, { query: prospectQuery, status: prospectStatus, priority: prospectPriority }), [prospects, prospectPriority, prospectQuery, prospectStatus]);
   const prospectSummary = useMemo(() => summarizeProspects(prospects), [prospects]);
@@ -56,8 +58,11 @@ export default function CrmPage({ activeTab = 'prospectos', onTabChange, prospec
     }
     setFileName(file.name);
     setAnalysisProgress(0);
+    setAnalyzedLead(null);
+    setAnalysisSteps(['Recibiendo conversación…']);
     const reader = new FileReader();
     reader.onload = () => {
+      setAnalysisSteps(s => [...s, 'Enviando a ADEIN Commercial Intelligence…']);
       void fetch('http://127.0.0.1:3192/api/local/lead-agent/queue', {
         method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ fileName: file.name, content: String(reader.result ?? '') }),
@@ -65,27 +70,44 @@ export default function CrmPage({ activeTab = 'prospectos', onTabChange, prospec
         if (!response.ok) throw new Error();
         const payload = await response.json() as { analysisStarted?: boolean };
         if (!payload.analysisStarted) throw new Error();
-        setAnalysisFeedback('Analizando ahora… actualizaremos Prospectos al terminar.');
+        setAnalysisSteps(s => [...s, 'Analizando conversación con IA…']);
+        setAnalysisFeedback('Analizando ahora…');
         const refreshed = await waitForProspectRefresh({
           previousLeads: prospects,
           attempts: 80,
-          onProgress: setAnalysisProgress,
+          onProgress: (p) => {
+            setAnalysisProgress(p);
+            if (p > 30 && !analysisSteps.includes('Extrayendo información comercial…'))
+              setAnalysisSteps(s => [...s, 'Extrayendo información comercial…']);
+            if (p > 60 && !analysisSteps.includes('Consultando memoria CRM…'))
+              setAnalysisSteps(s => [...s, 'Consultando memoria CRM…']);
+            if (p > 85 && !analysisSteps.includes('Actualizando prospecto…'))
+              setAnalysisSteps(s => [...s, 'Actualizando prospecto…']);
+          },
           listLeads: async () => {
             const leadsResponse = await fetch('http://127.0.0.1:3192/api/local/lead-agent/leads');
             if (!leadsResponse.ok) return prospects;
             const leadsPayload = await leadsResponse.json() as { ok?: boolean; leads?: Prospect[] };
-            return leadsPayload.ok && Array.isArray(leadsPayload.leads) ? leadsPayload.leads : prospects;
+            if (leadsPayload.ok && Array.isArray(leadsPayload.leads)) {
+              // Capture the latest analyzed lead
+              const newLeads = leadsPayload.leads.filter((l: Prospect) => 
+                !prospects.some((p: Prospect) => p.id === l.id) || l.lastContact !== prospects.find((p: Prospect) => p.id === l.id)?.lastContact
+              );
+              if (newLeads.length > 0) setAnalyzedLead(newLeads[0]);
+              else if (leadsPayload.leads.length > 0) setAnalyzedLead(leadsPayload.leads[0]);
+              return leadsPayload.leads;
+            }
+            return prospects;
           },
         });
         if (!refreshed) {
-          setAnalysisFeedback('El análisis sigue en curso. Prospectos se actualizará automáticamente al terminar.');
+          setAnalysisFeedback('El análisis sigue en curso. Actualizaremos automáticamente.');
           return;
         }
         onProspectsLoaded?.(refreshed);
         setAnalysisProgress(100);
-        setAnalysisFeedback('Análisis listo. Prospecto actualizado.');
-        await new Promise((resolve) => window.setTimeout(resolve, 450));
-        onTabChange ? onTabChange('prospectos') : setInternalTab('prospectos');
+        setAnalysisSteps(s => [...s, '✓ Análisis completado']);
+        setAnalysisFeedback('Análisis completado.');
       }).catch(() => { setAnalysisProgress(null); setAnalysisFeedback('No se pudo enviar el archivo al subagente local.'); });
     };
     reader.readAsText(file);
@@ -137,8 +159,105 @@ export default function CrmPage({ activeTab = 'prospectos', onTabChange, prospec
       {selectedProspect && <div className="quick-followup"><strong>{selectedProspect.property}</strong><input value={buyerName} onChange={(event) => setBuyerName(event.target.value)} placeholder="Nombre del comprador" aria-label="Nombre del comprador" /><input type="date" value={appointmentDate} onChange={(event) => setAppointmentDate(event.target.value)} /><input type="time" value={appointmentTime} onChange={(event) => setAppointmentTime(event.target.value)} /><button className="primary-action" onClick={saveQuickFollowup}>Guardar cita</button></div>}
       <div className="table-premium-wrap"><table className="table-premium"><thead><tr><th>Comprador</th><th>Fecha</th><th>Hora</th><th>Predio</th><th>Estatus</th><th></th></tr></thead><tbody>{appointments.length ? appointments.map((item) => <tr key={item.id}><td>{item.buyerName}</td><td>{item.date}</td><td>{item.time || 'Por confirmar'}</td><td>{item.property}</td><td>{item.status}</td><td>{item.status !== 'Realizada' && <button className="compact-action" onClick={() => completeAppointment(item.id)}>Marcar realizada</button>}</td></tr>) : <tr><td colSpan={6} className="empty-table-state">No hay citas registradas.</td></tr>}</tbody></table></div>
     </SectionCard> : <SectionCard title="Analizar WhatsApp" subtitle="Sube un archivo de WhatsApp para analizarlo.">
-      <label className="dropzone" htmlFor="whatsapp-file"><strong>Selecciona el archivo .txt exportado desde WhatsApp</strong><span>El subagente clasificará sólo datos comerciales autorizados.</span><input id="whatsapp-file" type="file" accept=".txt,text/plain" onChange={handleFile} /></label>
+      <label className="dropzone" htmlFor="whatsapp-file"><strong>Selecciona el archivo .txt exportado desde WhatsApp</strong><span>ADEIN analizará la conversación y clasificará al prospecto automáticamente.</span><input id="whatsapp-file" type="file" accept=".txt,text/plain" onChange={handleFile} /></label>
       {fileName && <p className="file-state"><strong>{fileName}</strong> seleccionado.</p>}
+      {analysisSteps.length > 0 && analysisProgress !== null && analysisProgress < 100 && (
+        <div className="analysis-steps">
+          {analysisSteps.map((step, i) => (
+            <div key={i} className={`analysis-step ${i === analysisSteps.length - 1 ? 'current' : 'done'}`}>
+              <span className="step-icon">{i === analysisSteps.length - 1 ? '●' : '✓'}</span>
+              <span>{step}</span>
+            </div>
+          ))}
+          <div className="analysis-progress" role="progressbar" aria-label="Progreso del análisis" aria-valuemin={0} aria-valuemax={100} aria-valuenow={analysisProgress}><div className="analysis-progress-track"><span style={{ width: `${analysisProgress}%` }} /></div><strong>{analysisProgress}%</strong></div>
+        </div>
+      )}
+      {analysisFeedback && analysisProgress === 100 && <p className="file-state success" role="status">✓ {analysisFeedback}</p>}
+      {analysisFeedback && analysisProgress === null && <p className="file-state error" role="alert">{analysisFeedback}</p>}
+
+      {/* Analysis Results */}
+      {analyzedLead && analysisProgress === 100 && (
+        <div className="analysis-results">
+          <div className="analysis-results-header">
+            <h3>Resultado del análisis</h3>
+            <button className="compact-action" onClick={() => { onTabChange ? onTabChange('prospectos') : setInternalTab('prospectos'); }}>Ver en Prospectos →</button>
+          </div>
+
+          <div className="analysis-grid">
+            <div className="analysis-field">
+              <span className="field-label">Prospecto</span>
+              <strong>{analyzedLead.name}</strong>
+              <small>{analyzedLead.phone}</small>
+            </div>
+            <div className="analysis-field">
+              <span className="field-label">Predio</span>
+              <strong>{analyzedLead.property}</strong>
+            </div>
+            <div className="analysis-field">
+              <span className="field-label">Etapa comercial</span>
+              <span className={`pill-badge ${analyzedLead.intentionLevel === 'Alta' ? 'pill-red' : 'pill-green'}`}>{(analyzedLead as any).commercialStage || analyzedLead.status}</span>
+            </div>
+            <div className="analysis-field">
+              <span className="field-label">Prioridad</span>
+              <span className={`priority-label priority-${(analyzedLead.intentionLevel || 'media').toLowerCase()}`}>{analyzedLead.intentionLevel}</span>
+            </div>
+          </div>
+
+          {(analyzedLead as any).summary && (
+            <div className="analysis-section">
+              <h4>Lo que entendió ADEIN</h4>
+              <p>{(analyzedLead as any).summary}</p>
+            </div>
+          )}
+
+          {(analyzedLead as any).stageReason && (
+            <div className="analysis-section">
+              <h4>Por qué lo clasificó así</h4>
+              <p className="muted">{(analyzedLead as any).stageReason}</p>
+            </div>
+          )}
+
+          {(analyzedLead as any).detectedSignals && (
+            <div className="analysis-section">
+              <h4>Señales detectadas</h4>
+              <div className="signal-list">
+                {(() => { try { return JSON.parse((analyzedLead as any).detectedSignals); } catch { return []; } })().map((s: string, i: number) => (
+                  <span key={i} className="signal-tag">✓ {s}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {(analyzedLead as any).missingInformation && (
+            <div className="analysis-section">
+              <h4>Información que todavía falta</h4>
+              <div className="signal-list">
+                {(() => { try { return JSON.parse((analyzedLead as any).missingInformation); } catch { return []; } })().map((s: string, i: number) => (
+                  <span key={i} className="signal-tag missing">○ {s}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="analysis-section">
+            <h4>Siguiente acción</h4>
+            <p><strong>{analyzedLead.nextAction}</strong></p>
+          </div>
+
+          {(analyzedLead as any).suggestedMessage && (
+            <div className="analysis-section">
+              <h4>Mensaje sugerido</h4>
+              <div className="suggested-message-box">
+                <p>{(analyzedLead as any).suggestedMessage}</p>
+                <div className="message-actions">
+                  <button className="compact-action" onClick={() => { navigator.clipboard.writeText((analyzedLead as any).suggestedMessage || ''); }}>Copiar</button>
+                  <small className="muted">Borrador — no se ha enviado ningún mensaje</small>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       {analysisProgress !== null && <div className="analysis-progress" role="progressbar" aria-label="Progreso del análisis" aria-valuemin={0} aria-valuemax={100} aria-valuenow={analysisProgress}><div className="analysis-progress-track"><span style={{ width: `${analysisProgress}%` }} /></div><strong>{analysisProgress}%</strong></div>}
       {analysisFeedback && <p className="file-state" role="status">{analysisFeedback}</p>}
     </SectionCard>}

@@ -25,11 +25,13 @@ const server = createLeadAgentApiServer({
   saveIngestion: repository.saveIngestion,
   listLeads: repository.listLeads,
   listAppointments: repository.listAppointments,
+  getLeadByPhone: repository.getLeadByPhone,
+  getAnalysisHistory: repository.getAnalysisHistory,
   queueTxt: createWhatsappQueue(whatsappQueueDir),
   triggerImmediateAnalysis: async ({ sourceRef }) => {
-    // Process queue directly with DeepSeek — no Hermes dependency
     const result = await processQueueDirectory(whatsappQueueDir, whatsappProcessedDir, {
       saveIngestion: repository.saveIngestion,
+      getLeadByPhone: repository.getLeadByPhone,
     });
     return result;
   },

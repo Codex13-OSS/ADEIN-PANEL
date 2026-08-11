@@ -47,6 +47,8 @@ export function createLeadAgentApiServer({
   saveIngestion,
   listLeads = async () => [],
   listAppointments = async () => [],
+  getLeadByPhone = async () => null,
+  getAnalysisHistory = async () => [],
   queueTxt = async () => { throw new Error('Cola de archivos no configurada'); },
   triggerImmediateAnalysis = async () => {},
   saveAppointment = async () => { throw new Error('Citas no configuradas'); },
@@ -61,6 +63,10 @@ export function createLeadAgentApiServer({
     }
     if (req.method === 'GET' && req.url === '/api/local/lead-agent/leads') {
       return json(res, 200, { ok: true, leads: await listLeads() }, req);
+    }
+    if (req.method === 'GET' && req.url?.startsWith('/api/local/lead-agent/leads/') && req.url.endsWith('/history')) {
+      const leadId = req.url.split('/')[6];
+      return json(res, 200, { ok: true, history: await getAnalysisHistory(leadId) }, req);
     }
     if (req.method === 'GET' && req.url === '/api/local/lead-agent/appointments') {
       return json(res, 200, { ok: true, appointments: await listAppointments() }, req);

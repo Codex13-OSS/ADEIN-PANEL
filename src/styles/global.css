@@ -424,3 +424,29 @@ th, td { padding: .8rem; border-bottom: 1px solid var(--border-soft); text-align
 
 @media (max-width: 1100px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } .rings-row-v2 { grid-template-columns: 1fr; } }
 @media (max-width: 768px) { .kpi-row { grid-template-columns: 1fr; } }
+
+/* ── WhatsApp Analysis Results ── */
+.analysis-steps { margin: 1rem 0; display: flex; flex-direction: column; gap: .4rem; }
+.analysis-step { display: flex; align-items: center; gap: .5rem; font-size: .82rem; color: var(--text-muted); }
+.analysis-step.done { color: var(--text-muted); opacity: .7; }
+.analysis-step.current { color: var(--text-main); font-weight: 500; }
+.step-icon { font-size: .7rem; width: 18px; text-align: center; }
+.analysis-results { margin-top: 1.2rem; background: linear-gradient(135deg, rgba(255,255,255,.20), rgba(238,246,240,.08)); border: 1px solid rgba(255,255,255,.28); border-radius: 16px; padding: 1.2rem; backdrop-filter: blur(24px); }
+.analysis-results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+.analysis-results-header h3 { margin: 0; font-size: 1rem; }
+.analysis-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: .8rem; margin-bottom: 1rem; }
+.analysis-field { display: flex; flex-direction: column; gap: .15rem; }
+.field-label { font-size: .68rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
+.analysis-field strong { font-size: .9rem; }
+.analysis-field small { font-size: .72rem; color: var(--text-muted); }
+.analysis-section { margin-top: .9rem; padding-top: .7rem; border-top: 1px solid rgba(0,0,0,.05); }
+.analysis-section h4 { margin: 0 0 .35rem; font-size: .8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em; }
+.analysis-section p { margin: 0; font-size: .85rem; line-height: 1.4; }
+.signal-list { display: flex; flex-wrap: wrap; gap: .4rem; }
+.signal-tag { display: inline-flex; align-items: center; gap: .2rem; padding: .2rem .55rem; border-radius: 999px; font-size: .72rem; background: rgba(11,122,66,.08); color: var(--accent-green-dark); }
+.signal-tag.missing { background: rgba(182,138,44,.08); color: #8B6914; }
+.suggested-message-box { background: rgba(255,255,255,.40); border: 1px solid rgba(255,255,255,.30); border-radius: 12px; padding: .8rem; margin-top: .3rem; }
+.suggested-message-box p { font-size: .85rem; line-height: 1.45; margin: 0 0 .5rem; }
+.message-actions { display: flex; align-items: center; gap: .6rem; }
+.file-state.success { color: var(--accent-green-dark); background: rgba(11,122,66,.06); border: 1px solid rgba(11,122,66,.12); border-radius: 10px; padding: .5rem .8rem; }
+.file-state.error { color: #A64B4B; background: rgba(166,75,75,.06); border: 1px solid rgba(166,75,75,.12); border-radius: 10px; padding: .5rem .8rem; }
