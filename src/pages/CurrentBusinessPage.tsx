@@ -16,13 +16,13 @@ export default function CurrentBusinessPage({ prospects }: Props) {
       <p className="muted">Solo mostramos datos que ya están en tu CRM. Pronto se integrarán ventas, inventario y cobranza.</p>
     </SectionCard>
     <section className="stats-grid">{[
-      ['Prospectos registrados', String(summary.total)],
-      ['Predios con interés', String(properties.length)],
-      ['Por atender', String(summary.total - summary.attended - summary.manualReview)],
-      ['Citas agendadas', String(summary.appointments)],
-      ['Prospectos atendidos', String(summary.attended)],
-      ['Por revisar', String(summary.manualReview)],
-    ].map(([l, v]) => <StatCard key={l} label={l} value={v} />)}</section>
+      ['Prospectos registrados', String(summary.total), '#0B7A42'],
+      ['Predios con interés', String(properties.length), '#5B8C5A'],
+      ['Por atender', String(summary.total - summary.attended - summary.manualReview), '#B68A2C'],
+      ['Citas agendadas', String(summary.appointments), '#3B82C4'],
+      ['Prospectos atendidos', String(summary.attended), '#0B7A42'],
+      ['Por revisar', String(summary.manualReview), '#7C6FBF'],
+    ].map(([l, v, color]) => <StatCard key={l} label={l} value={v} accent={color} />)}</section>
     <SectionCard title="Predios con actividad"><p className="muted">{properties.length ? properties.join(' · ') : 'Aún no hay predios registrados.'}</p></SectionCard>
   </div>;
 }
