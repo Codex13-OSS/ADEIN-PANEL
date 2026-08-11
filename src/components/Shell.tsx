@@ -102,6 +102,20 @@ function Shell({ session, defaultSection, onLogout }: Props) {
   return (
     <main className="app-shell">
       <AdeinAnimatedBackground variant="panel" />
+      {/* Mobile Navigation */}
+      <nav className="mobile-nav">
+        <div className="mobile-nav-brand">
+          <img src="/brand/adein.png" alt="ADEIN" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+          <span>{title}</span>
+        </div>
+        <div className="mobile-nav-links">
+          <button className={section === 'dashboard' ? 'active' : ''} onClick={() => handleSectionChange('dashboard')}>Inicio</button>
+          <button className={section === 'crm' ? 'active' : ''} onClick={() => handleSectionChange('crm')}>Ventas</button>
+          <button className={section === 'business' ? 'active' : ''} onClick={() => handleSectionChange('business')}>Negocio</button>
+          <button className={section === 'documents' ? 'active' : ''} onClick={() => handleSectionChange('documents')}>Docs</button>
+          <button onClick={onLogout}>Salir</button>
+        </div>
+      </nav>
       <Sidebar role={session.role} current={activeSection} activeCrmTab={activeCrmTab} onChange={handleSectionChange} collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((value) => !value)} />
       <section className="main-panel">
         <Header role={session.role} title={title} subtitle={subtitle} onLogout={onLogout} showLogout={section !== 'documents'} />
