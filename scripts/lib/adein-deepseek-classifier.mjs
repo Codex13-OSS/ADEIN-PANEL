@@ -22,12 +22,20 @@ commercialStage (etapa comercial — NUNCA mezclar con estado de contacto):
 - Contactado: ya hay conversación inicial pero faltan datos comerciales.
 - Interesado: mostró interés real (precio, ubicación, financiamiento, medidas).
 - Calificado: suficiente contexto para acción concreta (interés + capacidad + intención de avanzar).
-- Cita agendada: hay fecha acordada explícita. NO inferir de "¿puedo visitar?".
+- Cita agendada: SOLO cuando exista fecha Y hora concretas y confirmadas explícitamente. NO inferir de frases como "me gustaría visitar", "sí quiero conocerlo", "¿puedo ir?", "el sábado podría". Si solo hay intención de visitar sin fecha+hora acordadas, usar Calificado con nextActionType=AGENDAR_CITA.
 - Cita realizada: visita confirmada como completada.
 - Negociación: condiciones finales (descuento, apartado, forma de pago, documentos).
 - Apartado: compromiso/apartado confirmado. NUNCA inventar pagos.
 - Venta: operación cerrada confirmada.
 - No interesado: rechazo explícito o sin interés claro.
+
+REGLAS ESTRICTAS DE CITAS:
+- SOLO crea el campo appointment cuando existan AMBAS condiciones: fecha concreta (YYYY-MM-DD) Y hora concreta (HH:MM) explícitamente acordadas en la conversación.
+- "Me gustaría visitar" o "Sí, quiero conocerlo" → NO es cita. NO crear appointment. Stage=Calificado, nextActionType=AGENDAR_CITA.
+- "El sábado podría" o "¿Puedo ir el sábado?" → NO es cita (sin hora). Stage=Calificado, nextActionType=AGENDAR_CITA.
+- "Sí, sábado 15 de agosto a las 11am" → SÍ es cita. Stage=Cita agendada, appointment con date y time.
+- "Nos vemos mañana a las 4pm" → SÍ es cita si puedes inferir la fecha del contexto.
+- NUNCA inventes fecha ni hora. Si no son claras en la conversación, appointment debe ser null.
 
 contactState:
 - Activo: conversación reciente, prospecto respondiendo.
@@ -65,19 +73,19 @@ RESPONDE SOLO CON JSON VÁLIDO, sin markdown, sin explicaciones:
     "phone": "solo dígitos o ''",
     "property": "nombre del predio o 'Por confirmar'",
     "budget": "presupuesto o 'Por confirmar'",
-    "paymentPreference": "efectivo|crédito|mixto|mensualidades|'Por confirmar'",
+    "paymentPreference": "efectivo|credito|mixto|mensualidades|'Por confirmar'",
     "priority": "Alta|Media|Baja",
     "commercialStage": "etapa comercial (ver arriba)",
     "contactState": "estado de contacto (ver arriba)",
     "summary": "resumen comercial breve, sin citas textuales",
-    "stageReason": "por qué se asignó esta etapa comercial",
-    "detectedSignals": ["señal1", "señal2"],
+    "stageReason": "por que se asigno esta etapa comercial",
+    "detectedSignals": ["senal1", "senal2"],
     "missingInformation": ["faltante1"],
-    "nextAction": "descripción breve de la acción recomendada",
+    "nextAction": "descripcion breve de la accion recomendada",
     "nextActionType": "RESPONDER|OBTENER_INFORMACION|...",
-    "suggestedFollowupAt": "YYYY-MM-DD o fecha vacía ''",
+    "suggestedFollowupAt": "YYYY-MM-DD o fecha vacia ''",
     "suggestedMessage": "texto del borrador de respuesta",
-    "suggestedMessageReason": "por qué este mensaje",
+    "suggestedMessageReason": "por que este mensaje",
     "appointment": {"date":"YYYY-MM-DD","time":"HH:MM","property":"predio"} | null
   }]
 }`;
@@ -101,15 +109,36 @@ async function fetchLeadContext(phoneNormalized, { getLeadByPhone }) {
   } catch { return null; }
 }
 
+// Deterministic validation: reject Cita agendada without concrete date+time
+function validateAppointment(lead) {
+  const hasAppointment = lead.appointment && lead.appointment.date && lead.appointment.time;
+  const wantsCitaStage = lead.commercialStage === 'Cita agendada';
+
+  if (wantsCitaStage && !hasAppointment) {
+    // Model claims Cita agendada but no concrete date+time → reject
+    lead.commercialStage = 'Calificado';
+    lead.nextActionType = lead.nextActionType || 'AGENDAR_CITA';
+    lead.nextAction = lead.nextAction || 'Acordar fecha y hora concretas para la visita.';
+    lead.stageReason = (lead.stageReason || '') + ' [Corregido: sin fecha/hora concreta para Cita agendada]';
+    lead.appointment = null;
+  }
+
+  if (hasAppointment && !wantsCitaStage) {
+    // Has concrete appointment but stage doesn't reflect it → fix stage
+    lead.commercialStage = 'Cita agendada';
+  }
+
+  return lead;
+}
+
 export async function classifyWhatsAppFile(filePath, { saveIngestion, getLeadByPhone }) {
   const content = await fs.readFile(filePath, 'utf8');
   const fileName = path.basename(filePath);
 
   if (!DEEPSEEK_API_KEY) {
-    throw new Error('DEEPSEEK_API_KEY no configurada. source ~/.agentes-si-data/adein/secrets/lead-agent.env');
+    throw new Error('DEEPSEEK_API_KEY no configurada.');
   }
 
-  // Extract phone from conversation and fetch existing context
   const phoneMatch = content.match(/(\d[\d\s-]{8,})/);
   let existingContext = null;
   if (phoneMatch && getLeadByPhone) {
@@ -120,8 +149,8 @@ export async function classifyWhatsAppFile(filePath, { saveIngestion, getLeadByP
   }
 
   const userContent = existingContext
-    ? `CONTEXTO PREVIO DEL PROSPECTO (mismo teléfono, conversación anterior):\n${JSON.stringify(existingContext, null, 2)}\n\nNUEVA CONVERSACIÓN A ANALIZAR:\n\n${content.slice(0, 8000)}`
-    : `Analiza esta conversación:\n\n${content.slice(0, 8000)}`;
+    ? `CONTEXTO PREVIO DEL PROSPECTO:\n${JSON.stringify(existingContext, null, 2)}\n\nNUEVA CONVERSACION:\n\n${content.slice(0, 8000)}`
+    : `Analiza esta conversacion:\n\n${content.slice(0, 8000)}`;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
@@ -152,7 +181,7 @@ export async function classifyWhatsAppFile(filePath, { saveIngestion, getLeadByP
 
     const data = await response.json();
     const raw = data?.choices?.[0]?.message?.content;
-    if (!raw) throw new Error('DeepSeek response vacía');
+    if (!raw) throw new Error('DeepSeek response empty');
 
     let parsed;
     try { parsed = JSON.parse(raw); }
@@ -162,45 +191,47 @@ export async function classifyWhatsAppFile(filePath, { saveIngestion, getLeadByP
     }
 
     if (!parsed.leads || !Array.isArray(parsed.leads) || parsed.leads.length === 0) {
-      throw new Error('Respuesta sin leads válidos');
+      throw new Error('Response without valid leads');
     }
 
-    const ALLOWED_STAGES = ['Nuevo','Contactado','Interesado','Calificado','Cita agendada','Cita realizada','Negociación','Apartado','Venta','No interesado'];
+    const ALLOWED_STAGES = ['Nuevo','Contactado','Interesado','Calificado','Cita agendada','Cita realizada','Negociacion','Apartado','Venta','No interesado'];
     const ALLOWED_CONTACT = ['Activo','Esperando respuesta','Sin respuesta','Pausado'];
     const ALLOWED_PRIORITY = ['Alta','Media','Baja'];
 
     const results = [];
     for (const lead of parsed.leads) {
-      const commercialStage = ALLOWED_STAGES.includes(lead.commercialStage) ? lead.commercialStage : 'Nuevo';
-      const contactState = ALLOWED_CONTACT.includes(lead.contactState) ? lead.contactState : 'Activo';
-      const priority = ALLOWED_PRIORITY.includes(lead.priority) ? lead.priority : 'Media';
+      // Apply deterministic validation
+      const validated = validateAppointment(lead);
+
+      const commercialStage = ALLOWED_STAGES.includes(validated.commercialStage) ? validated.commercialStage : 'Nuevo';
+      const contactState = ALLOWED_CONTACT.includes(validated.contactState) ? validated.contactState : 'Activo';
+      const priority = ALLOWED_PRIORITY.includes(validated.priority) ? validated.priority : 'Media';
 
       const record = buildLeadIngestionRecord({
         sourceRef: fileName,
         decision: {
-          name: lead.name || 'Por confirmar',
-          phone: lead.phone || '',
-          property: lead.property || 'Por confirmar',
-          budget: lead.budget || 'Por confirmar',
+          name: validated.name || 'Por confirmar',
+          phone: validated.phone || '',
+          property: validated.property || 'Por confirmar',
+          budget: validated.budget || 'Por confirmar',
           priority,
           status: commercialStage,
-          summary: (lead.summary || '').slice(0, 500),
-          nextAction: (lead.nextAction || 'Revisar conversación').slice(0, 255),
-          appointment: lead.appointment && lead.appointment.date ? lead.appointment : null,
+          summary: (validated.summary || '').slice(0, 500),
+          nextAction: (validated.nextAction || 'Revisar conversacion').slice(0, 255),
+          appointment: validated.appointment && validated.appointment.date && validated.appointment.time ? validated.appointment : null,
         },
       });
 
-      // Attach expanded commercial data as metadata on the record
       record.meta = {
         commercialStage,
         contactState,
-        stageReason: (lead.stageReason || '').slice(0, 500),
-        detectedSignals: Array.isArray(lead.detectedSignals) ? lead.detectedSignals : [],
-        missingInformation: Array.isArray(lead.missingInformation) ? lead.missingInformation : [],
-        paymentPreference: (lead.paymentPreference || 'Por confirmar').slice(0, 160),
-        nextActionType: lead.nextActionType || 'SEGUIMIENTO',
-        suggestedMessage: (lead.suggestedMessage || '').slice(0, 1000),
-        suggestedMessageReason: (lead.suggestedMessageReason || '').slice(0, 255),
+        stageReason: (validated.stageReason || '').slice(0, 500),
+        detectedSignals: Array.isArray(validated.detectedSignals) ? validated.detectedSignals : [],
+        missingInformation: Array.isArray(validated.missingInformation) ? validated.missingInformation : [],
+        paymentPreference: (validated.paymentPreference || 'Por confirmar').slice(0, 160),
+        nextActionType: validated.nextActionType || 'SEGUIMIENTO',
+        suggestedMessage: (validated.suggestedMessage || '').slice(0, 1000),
+        suggestedMessageReason: (validated.suggestedMessageReason || '').slice(0, 255),
         priorContext: existingContext,
       };
 
