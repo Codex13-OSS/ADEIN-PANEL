@@ -1,4 +1,4 @@
-import { ChangeEvent, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { filterProspects, summarizeProspects } from '../lib/crmProspectList.mjs';
 import { waitForProspectRefresh } from '../lib/leadImportProgress.mjs';
 import SectionCard from '../components/SectionCard';
@@ -19,6 +19,15 @@ const TAB_OPTIONS: { key: CrmTab; label: string }[] = [
   { key: 'whatsapp', label: 'Analizar WhatsApp' },
 ];
 
+const ANALYSIS_STEPS = [
+  'Conversación recibida',
+  'Prospecto identificado',
+  'Memoria CRM consultada',
+  'Información comercial analizada',
+  'CRM actualizado',
+  'Siguiente acción preparada',
+];
+
 export default function CrmPage({ activeTab = 'prospectos', onTabChange, prospects, onProspectsLoaded }: Props) {
   const [internalTab, setInternalTab] = useState<CrmTab>(activeTab);
   const [fileName, setFileName] = useState('');
@@ -34,17 +43,19 @@ export default function CrmPage({ activeTab = 'prospectos', onTabChange, prospec
   const [buyerName, setBuyerName] = useState('');
   const [appointments, setAppointments] = useState<{ id: string; leadId: string; buyerName: string; date: string; time: string; property: string; status: string }[]>([]);
   const [analyzedLead, setAnalyzedLead] = useState<Prospect | null>(null);
-  const [analysisSteps, setAnalysisSteps] = useState<string[]>([]);
+  const [analysisStepIndex, setAnalysisStepIndex] = useState(0);
   const currentTab = onTabChange ? activeTab : internalTab;
   const visibleProspects = useMemo(() => filterProspects(prospects, { query: prospectQuery, status: prospectStatus, priority: prospectPriority }), [prospects, prospectPriority, prospectQuery, prospectStatus]);
   const prospectSummary = useMemo(() => summarizeProspects(prospects), [prospects]);
+  const prospectsRef = useRef(prospects);
+  prospectsRef.current = prospects;
 
   const refreshAppointments = async () => {
     try {
       const response = await fetch('http://127.0.0.1:3192/api/local/lead-agent/appointments');
       const payload = await response.json() as { ok?: boolean; appointments?: typeof appointments };
       if (response.ok && payload.ok && Array.isArray(payload.appointments)) setAppointments(payload.appointments);
-    } catch { setAnalysisFeedback('No se pudieron cargar las citas.'); }
+    } catch { /* silent */ }
   };
 
   useEffect(() => { void refreshAppointments(); }, []);
@@ -59,56 +70,83 @@ export default function CrmPage({ activeTab = 'prospectos', onTabChange, prospec
     setFileName(file.name);
     setAnalysisProgress(0);
     setAnalyzedLead(null);
-    setAnalysisSteps(['Recibiendo conversación…']);
+    setAnalysisStepIndex(0);
+    setAnalysisFeedback('');
+
     const reader = new FileReader();
     reader.onload = () => {
-      setAnalysisSteps(s => [...s, 'Enviando a ADEIN Commercial Intelligence…']);
       void fetch('http://127.0.0.1:3192/api/local/lead-agent/queue', {
         method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ fileName: file.name, content: String(reader.result ?? '') }),
       }).then(async (response) => {
-        if (!response.ok) throw new Error();
+        if (!response.ok) throw new Error('Error del servidor');
         const payload = await response.json() as { analysisStarted?: boolean };
-        if (!payload.analysisStarted) throw new Error();
-        setAnalysisSteps(s => [...s, 'Analizando conversación con IA…']);
-        setAnalysisFeedback('Analizando ahora…');
+        if (!payload.analysisStarted) throw new Error('No se pudo iniciar el análisis');
+
+        // Poll until leads change or timeout
         const refreshed = await waitForProspectRefresh({
-          previousLeads: prospects,
+          previousLeads: prospectsRef.current,
           attempts: 80,
+          intervalMs: 750,
           onProgress: (p) => {
             setAnalysisProgress(p);
-            if (p > 30 && !analysisSteps.includes('Extrayendo información comercial…'))
-              setAnalysisSteps(s => [...s, 'Extrayendo información comercial…']);
-            if (p > 60 && !analysisSteps.includes('Consultando memoria CRM…'))
-              setAnalysisSteps(s => [...s, 'Consultando memoria CRM…']);
-            if (p > 85 && !analysisSteps.includes('Actualizando prospecto…'))
-              setAnalysisSteps(s => [...s, 'Actualizando prospecto…']);
+            // Map progress to steps
+            if (p >= 12 && analysisStepIndex < 1) setAnalysisStepIndex(1);
+            if (p >= 28 && analysisStepIndex < 2) setAnalysisStepIndex(2);
+            if (p >= 44 && analysisStepIndex < 3) setAnalysisStepIndex(3);
+            if (p >= 60 && analysisStepIndex < 4) setAnalysisStepIndex(4);
+            if (p >= 76 && analysisStepIndex < 5) setAnalysisStepIndex(5);
+            if (p >= 92 && analysisStepIndex < 6) setAnalysisStepIndex(6);
           },
           listLeads: async () => {
-            const leadsResponse = await fetch('http://127.0.0.1:3192/api/local/lead-agent/leads');
-            if (!leadsResponse.ok) return prospects;
-            const leadsPayload = await leadsResponse.json() as { ok?: boolean; leads?: Prospect[] };
-            if (leadsPayload.ok && Array.isArray(leadsPayload.leads)) {
-              // Capture the latest analyzed lead
-              const newLeads = leadsPayload.leads.filter((l: Prospect) => 
-                !prospects.some((p: Prospect) => p.id === l.id) || l.lastContact !== prospects.find((p: Prospect) => p.id === l.id)?.lastContact
-              );
-              if (newLeads.length > 0) setAnalyzedLead(newLeads[0]);
-              else if (leadsPayload.leads.length > 0) setAnalyzedLead(leadsPayload.leads[0]);
-              return leadsPayload.leads;
-            }
-            return prospects;
+            const r = await fetch('http://127.0.0.1:3192/api/local/lead-agent/leads');
+            if (!r.ok) return prospectsRef.current;
+            const d = await r.json() as { ok?: boolean; leads?: Prospect[] };
+            return d.ok && Array.isArray(d.leads) ? d.leads : prospectsRef.current;
           },
         });
-        if (!refreshed) {
-          setAnalysisFeedback('El análisis sigue en curso. Actualizaremos automáticamente.');
-          return;
+
+        if (refreshed) {
+          // Analysis completed, leads changed
+          onProspectsLoaded?.(refreshed);
+          setAnalysisProgress(100);
+          setAnalysisStepIndex(6);
+          setAnalysisFeedback('Análisis completado.');
+
+          // Find the analyzed lead
+          const previousIds = new Set(prospectsRef.current.map((p: Prospect) => p.id));
+          const newOrUpdated = refreshed.find((l: Prospect) => {
+            if (!previousIds.has(l.id)) return true; // new lead
+            const prev = prospectsRef.current.find((p: Prospect) => p.id === l.id);
+            return prev && prev.lastContact !== l.lastContact; // updated
+          });
+          if (newOrUpdated) setAnalyzedLead(newOrUpdated);
+          else if (refreshed.length > 0) setAnalyzedLead(refreshed[0]);
+
+          void refreshAppointments();
+        } else {
+          // Timeout — fetch latest leads anyway
+          setAnalysisProgress(100);
+          setAnalysisStepIndex(6);
+          try {
+            const r = await fetch('http://127.0.0.1:3192/api/local/lead-agent/leads');
+            const d = await r.json() as { ok?: boolean; leads?: Prospect[] };
+            if (d.ok && Array.isArray(d.leads) && d.leads.length > 0) {
+              onProspectsLoaded?.(d.leads);
+              setAnalyzedLead(d.leads[0]);
+              setAnalysisFeedback('Análisis completado.');
+            } else {
+              setAnalysisFeedback('El análisis está en curso. Revisa Prospectos en unos momentos.');
+            }
+          } catch {
+            setAnalysisFeedback('El análisis está en curso. Revisa Prospectos en unos momentos.');
+          }
+          void refreshAppointments();
         }
-        onProspectsLoaded?.(refreshed);
-        setAnalysisProgress(100);
-        setAnalysisSteps(s => [...s, '✓ Análisis completado']);
-        setAnalysisFeedback('Análisis completado.');
-      }).catch(() => { setAnalysisProgress(null); setAnalysisFeedback('No se pudo enviar el archivo al subagente local.'); });
+      }).catch((err) => {
+        setAnalysisProgress(null);
+        setAnalysisFeedback(err instanceof Error ? err.message : 'No se pudo enviar el archivo.');
+      });
     };
     reader.readAsText(file);
   };
@@ -161,21 +199,29 @@ export default function CrmPage({ activeTab = 'prospectos', onTabChange, prospec
     </SectionCard> : <SectionCard title="Analizar WhatsApp" subtitle="Sube un archivo de WhatsApp para analizarlo.">
       <label className="dropzone" htmlFor="whatsapp-file"><strong>Selecciona el archivo .txt exportado desde WhatsApp</strong><span>ADEIN analizará la conversación y clasificará al prospecto automáticamente.</span><input id="whatsapp-file" type="file" accept=".txt,text/plain" onChange={handleFile} /></label>
       {fileName && <p className="file-state"><strong>{fileName}</strong> seleccionado.</p>}
-      {analysisSteps.length > 0 && analysisProgress !== null && analysisProgress < 100 && (
+
+      {analysisProgress !== null && analysisProgress < 100 && (
         <div className="analysis-steps">
-          {analysisSteps.map((step, i) => (
-            <div key={i} className={`analysis-step ${i === analysisSteps.length - 1 ? 'current' : 'done'}`}>
-              <span className="step-icon">{i === analysisSteps.length - 1 ? '●' : '✓'}</span>
+          {ANALYSIS_STEPS.map((step, i) => (
+            <div key={i} className={`analysis-step ${i < analysisStepIndex ? 'done' : i === analysisStepIndex ? 'current' : 'pending'}`}>
+              <span className="step-icon">{i < analysisStepIndex ? '✓' : i === analysisStepIndex ? '●' : '○'}</span>
               <span>{step}</span>
             </div>
           ))}
-          <div className="analysis-progress" role="progressbar" aria-label="Progreso del análisis" aria-valuemin={0} aria-valuemax={100} aria-valuenow={analysisProgress}><div className="analysis-progress-track"><span style={{ width: `${analysisProgress}%` }} /></div><strong>{analysisProgress}%</strong></div>
+          <div className="analysis-progress" role="progressbar" aria-label="Progreso del análisis" aria-valuemin={0} aria-valuemax={100} aria-valuenow={analysisProgress}>
+            <div className="analysis-progress-track"><span style={{ width: `${analysisProgress}%` }} /></div>
+            <strong>{analysisProgress}%</strong>
+          </div>
         </div>
       )}
-      {analysisFeedback && analysisProgress === 100 && <p className="file-state success" role="status">✓ {analysisFeedback}</p>}
-      {analysisFeedback && analysisProgress === null && <p className="file-state error" role="alert">{analysisFeedback}</p>}
 
-      {/* Analysis Results */}
+      {analysisProgress === 100 && analysisFeedback && (
+        <p className="file-state success" role="status">✓ {analysisFeedback}</p>
+      )}
+      {analysisProgress === null && analysisFeedback && (
+        <p className="file-state error" role="alert">{analysisFeedback}</p>
+      )}
+
       {analyzedLead && analysisProgress === 100 && (
         <div className="analysis-results">
           <div className="analysis-results-header">
@@ -256,10 +302,15 @@ export default function CrmPage({ activeTab = 'prospectos', onTabChange, prospec
               </div>
             </div>
           )}
+
+          <div style={{ display: 'flex', gap: '.5rem', marginTop: '1rem' }}>
+            <button className="primary-action" onClick={() => { setFileName(''); setAnalysisProgress(null); setAnalyzedLead(null); setAnalysisStepIndex(0); setAnalysisFeedback(''); }}>Analizar otra conversación</button>
+            {analyzedLead.status === 'Cita agendada' && (
+              <button className="compact-action" onClick={() => { onTabChange ? onTabChange('appointments') : setInternalTab('appointments'); }}>Ir a Citas</button>
+            )}
+          </div>
         </div>
       )}
-      {analysisProgress !== null && <div className="analysis-progress" role="progressbar" aria-label="Progreso del análisis" aria-valuemin={0} aria-valuemax={100} aria-valuenow={analysisProgress}><div className="analysis-progress-track"><span style={{ width: `${analysisProgress}%` }} /></div><strong>{analysisProgress}%</strong></div>}
-      {analysisFeedback && <p className="file-state" role="status">{analysisFeedback}</p>}
     </SectionCard>}
   </div>;
 }

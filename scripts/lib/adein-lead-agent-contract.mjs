@@ -1,5 +1,5 @@
 const ALLOWED_PRIORITIES = new Set(['Alta', 'Media', 'Baja']);
-const ALLOWED_STATUSES = new Set(['Nuevo', 'Contactado', 'Cita agendada', 'Venta', 'Descartado', 'Revisión manual']);
+const ALLOWED_STATUSES = new Set(['Nuevo', 'Contactado', 'Interesado', 'Calificado', 'Cita agendada', 'Cita realizada', 'Negociación', 'Apartado', 'Venta', 'Descartado', 'No interesado', 'Revisión manual']);
 
 const toIsoDate = (value) => value.toISOString().slice(0, 10);
 
