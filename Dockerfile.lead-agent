@@ -1,0 +1,13 @@
+FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev
+COPY scripts/ ./scripts/
+ENV DEEPSEEK_BASE_URL=https://api.deepseek.com
+ENV DEEPSEEK_MODEL=deepseek-chat
+ENV LEAD_AGENT_API_TIMEOUT=120000
+ENV LEAD_AGENT_LISTEN=0.0.0.0
+ENV LEAD_AGENT_PORT=3192
+EXPOSE 3192
+HEALTHCHECK --interval=10s CMD curl -s -o /dev/null -w '%{http_code}' http://localhost:3192/health | grep 200
+CMD ["node", "scripts/adein-lead-agent-api-server.mjs"]

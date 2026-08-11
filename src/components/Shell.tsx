@@ -11,6 +11,7 @@ import { CrmTab } from '../pages/CrmPage';
 import AdeinAnimatedBackground from './AdeinAnimatedBackground';
 import { Prospect } from '../types/crm';
 import { DbSnapshotProvider } from '../context/DbSnapshotContext';
+import { LEAD_AGENT_API } from '../lib/runtimeConfig';
 
 export type OwnerSection = 'dashboard' | 'crm' | 'business' | 'documents';
 export type SellerSection = 'crm' | 'documents';
@@ -43,7 +44,7 @@ function Shell({ session, defaultSection, onLogout }: Props) {
     let active = true;
     const refreshAgentLeads = async () => {
       try {
-        const response = await fetch('http://127.0.0.1:3192/api/local/lead-agent/leads');
+        const response = await fetch(`${LEAD_AGENT_API}/leads`);
         if (!response.ok) return;
         const payload = await response.json() as { ok?: boolean; leads?: Prospect[] };
         if (active && payload.ok && Array.isArray(payload.leads)) setProspects(payload.leads);

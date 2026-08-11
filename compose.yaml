@@ -1,0 +1,52 @@
+services:
+  db:
+    image: mariadb:11
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME:-adein_crm_dev}
+      MYSQL_USER: ${DB_USER:-adein}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - adein_mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost"]
+      interval: 5s
+      retries: 10
+    expose:
+      - "3306"
+    restart: unless-stopped
+
+  lead-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.lead-agent
+    environment:
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: ${DB_NAME:-adein_crm_dev}
+      DB_USER: ${DB_USER:-adein}
+      DB_PASSWORD: ${DB_PASSWORD}
+      LEAD_AGENT_LISTEN: "0.0.0.0"
+    expose:
+      - "3192"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    environment:
+      ADEIN_LIA_URL: ${ADEIN_LIA_URL:-http://127.0.0.1:3002}
+    ports:
+      - "${ADEIN_HTTP_PORT:-8080}:80"
+    depends_on:
+      lead-agent:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  adein_mariadb_data:
