@@ -59,7 +59,11 @@ docker exec adein-release-test-db-1 mariadb-dump -u adein -p adein_crm_dev | gzi
 ## Restore
 
 ```bash
-cat backup.sql.gz | gunzip | docker exec -i adein-release-test-db-1 mariadb -u adein -p adein_crm_dev
+# Using helper
+DB_PASSWORD=xxx bash scripts/db-restore.sh <project> backup.sql.gz
+
+# Or manual
+cat backup.sql.gz | gunzip | docker compose exec -T db mariadb -u adein -p adein_crm_dev
 ```
 
 ## NO hacer
