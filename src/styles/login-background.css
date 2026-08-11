@@ -31,7 +31,7 @@
   height: 200%;
   top: -50%;
   left: -50%;
-  background-image: linear-gradient(rgba(30, 124, 83, 0.08) 2px, transparent 2px), linear-gradient(90deg, rgba(30, 124, 83, 0.08) 2px, transparent 2px);
+  background-image: linear-gradient(rgba(30, 124, 83, 0.04) 2px, transparent 2px), linear-gradient(90deg, rgba(30, 124, 83, 0.04) 2px, transparent 2px);
   background-size: 100px 100px;
   animation: grid-drift-1 20s ease-in-out infinite alternate;
 }
@@ -42,7 +42,7 @@
   height: 200%;
   top: -50%;
   left: -50%;
-  background-image: linear-gradient(rgba(30, 124, 83, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(30, 124, 83, 0.04) 1px, transparent 1px);
+  background-image: linear-gradient(rgba(30, 124, 83, 0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(30, 124, 83, 0.02) 1px, transparent 1px);
   background-size: 50px 50px;
   animation: grid-drift-2 15s ease-in-out infinite alternate;
 }
@@ -58,7 +58,7 @@
 
 .crm-animated-background .m-line {
   position: absolute;
-  background: rgba(30, 124, 83, 0.15);
+  background: rgba(30, 124, 83, 0.07);
 }
 
 .crm-animated-background .m-h1,

@@ -15,14 +15,14 @@ function OwnerDashboardPage({ prospects }: Props) {
 
   return (
     <div className="page-grid">
-      <SectionCard title="Dashboard maestro" subtitle="Resumen en tiempo real de los prospectos registrados en el CRM.">
-        <p className="muted">Sin estimaciones ni históricos de navegador. La fuente es el CRM local.</p>
+      <SectionCard title="¿Qué necesita tu atención?" subtitle="Resumen en tiempo real de tus prospectos.">
+        <p className="muted">Datos del CRM local, sin estimaciones.</p>
       </SectionCard>
       <section className="stats-grid">
-        <StatCard label="Prospectos" value={String(summary.total)} hint="Registros del CRM" />
-        <StatCard label="Alta prioridad" value={String(summary.highPriority)} hint="Requieren atención" />
+        <StatCard label="Total de prospectos" value={String(summary.total)} hint="Registrados en el CRM" />
+        <StatCard label="Urgentes" value={String(summary.highPriority)} hint="Prioridad alta" />
         <StatCard label="Citas agendadas" value={String(summary.appointments)} hint="Confirmar y atender" />
-        <StatCard label="Revisión manual" value={String(summary.manualReview)} hint="Información incompleta" />
+        <StatCard label="Por revisar" value={String(summary.manualReview)} hint="Información incompleta" />
       </section>
       <section className="dashboard-chart-grid" aria-label="Distribución actual del CRM">
         {charts.map((chart) => {
@@ -41,10 +41,10 @@ function OwnerDashboardPage({ prospects }: Props) {
           );
         })}
       </section>
-      <SectionCard title="Atender primero" subtitle="Prospectos con prioridad alta, cita o revisión pendiente.">
+      <SectionCard title="Requiere tu atención ahora" subtitle="Prospectos con prioridad alta, cita o revisión pendiente.">
         <div className="table-premium-wrap">
           <table className="table-premium"><thead><tr><th>Prospecto</th><th>Prioridad</th><th>Estatus</th><th>Próxima acción</th></tr></thead>
-            <tbody>{attentionList.length > 0 ? attentionList.map((item) => <tr key={item.id}><td>{item.name}</td><td><span className={`priority-label priority-${item.intentionLevel.toLowerCase()}`}>{item.intentionLevel}</span></td><td>{item.status}</td><td>{item.nextAction}</td></tr>) : <tr><td colSpan={4} className="empty-table-state">Aún no hay prioridades activas en el CRM.</td></tr>}</tbody>
+            <tbody>{attentionList.length > 0 ? attentionList.map((item) => <tr key={item.id}><td>{item.name}</td><td><span className={`priority-label priority-${item.intentionLevel.toLowerCase()}`}>{item.intentionLevel}</span></td><td>{item.status}</td><td>{item.nextAction}</td></tr>) : <tr><td colSpan={4} className="empty-table-state">No hay nada urgente. ¡Buen trabajo!</td></tr>}</tbody>
           </table>
         </div>
       </SectionCard>

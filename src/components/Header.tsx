@@ -15,9 +15,8 @@ function Header({ title, subtitle, role, onLogout, showLogout = true }: Props) {
         </div>
       </div>
       <div className="header-right">
-        <StatusBadge>{role === 'owner' ? 'Rol: Dueño / Admin' : 'Rol: Vendedor'}</StatusBadge>
-        <StatusBadge tone="success">Plataforma LIA OS</StatusBadge>
-        {showLogout && <button className="btn-outline" onClick={onLogout}>Cerrar sesión</button>}
+        <StatusBadge>{role === 'owner' ? 'Administrador' : 'Vendedor'}</StatusBadge>
+        {showLogout && <button className="btn-outline" onClick={onLogout}>Salir</button>}
       </div>
     </header>
   );

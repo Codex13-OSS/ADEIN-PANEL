@@ -12,8 +12,8 @@ export default function CurrentBusinessPage({ prospects }: Props) {
   const properties = [...new Set(prospects.map((item) => item.property).filter(Boolean))];
 
   return <div className="page-grid">
-    <SectionCard title="Negocio actual" subtitle="Resumen operativo calculado únicamente con datos registrados en el CRM.">
-      <p className="muted">Sin estimaciones de ventas, inventario ni cobranza: esos datos se incorporarán cuando exista una fuente operativa autorizada.</p>
+    <SectionCard title="Mi negocio" subtitle="Así va tu operación hoy.">
+      <p className="muted">Solo mostramos datos que ya están en tu CRM. Pronto se integrarán ventas, inventario y cobranza.</p>
     </SectionCard>
     <section className="stats-grid">{[
       ['Prospectos registrados', String(summary.total)],
@@ -21,8 +21,8 @@ export default function CurrentBusinessPage({ prospects }: Props) {
       ['Por atender', String(summary.total - summary.attended - summary.manualReview)],
       ['Citas agendadas', String(summary.appointments)],
       ['Prospectos atendidos', String(summary.attended)],
-      ['Revisión manual', String(summary.manualReview)],
+      ['Por revisar', String(summary.manualReview)],
     ].map(([l, v]) => <StatCard key={l} label={l} value={v} />)}</section>
-    <SectionCard title="Predios con actividad"><p className="muted">{properties.length ? properties.join(' · ') : 'Aún no hay predios registrados en el CRM.'}</p></SectionCard>
+    <SectionCard title="Predios con actividad"><p className="muted">{properties.length ? properties.join(' · ') : 'Aún no hay predios registrados.'}</p></SectionCard>
   </div>;
 }

@@ -82,13 +82,13 @@ function Shell({ session, defaultSection, onLogout }: Props) {
     }
   };
   const title = useMemo(() => ({
-    dashboard: 'Dashboard maestro', crm: 'CRM ventas', business: 'Negocio actual',
+    dashboard: 'Inicio', crm: 'Ventas', business: 'Mi negocio',
     documents: 'Documentos',
   }[section]), [section]);
 
   const subtitle = useMemo(() => ({
-    dashboard: 'Centro de decisiones comerciales del día', crm: 'Pipeline y operación comercial guiada', business: 'Estado operativo del predio actual',
-    documents: 'Generador documental integrado',
+    dashboard: 'Lo más importante hoy', crm: 'Prospectos, citas y conversaciones', business: 'Cómo va tu operación',
+    documents: 'Contratos y pagarés',
   }[section]), [section]);
 
   const renderPage = () => {
