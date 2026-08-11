@@ -91,6 +91,10 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .sidebar nav button.active { background: linear-gradient(135deg, rgba(255,255,255,.45), rgba(238,246,240,.30)); border-color: rgba(11,122,66,.18); color: var(--accent-green-dark); font-weight: 600; box-shadow: 0 2px 12px rgba(11,122,66,.08); }
 .sidebar nav button.active .sidebar-nav-icon { opacity: 1; color: var(--accent-green); }
 .sidebar-footer { margin-top: auto; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,.25); }
+.sidebar-external-link { display: flex; align-items: center; padding: .68rem .8rem; border-radius: 12px; color: var(--text-muted); font-weight: 500; font-size: .875rem; text-decoration: none; transition: all .18s ease; margin-top: .3rem; }
+.sidebar-external-link:hover { background: rgba(255,255,255,.25); color: var(--text-main); }
+.sidebar-external-link .sidebar-nav-icon { opacity: .6; }
+.sidebar-external-link:hover .sidebar-nav-icon { opacity: .85; }
 .sidebar-version { font-size: .65rem; color: var(--text-muted); letter-spacing: .06em; text-transform: uppercase; }
 .main-panel { padding: 1rem 1.2rem 1.4rem; }
 .app-header {

@@ -19,6 +19,8 @@ const ownerNav: NavItem[] = [
   { key: 'documents', label: 'Documentos', icon: <DocsIcon /> },
 ];
 
+const ExternalIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>;
+
 const sellerNav: NavItem[] = [
   { key: 'crm', label: 'Prospectos', icon: <SalesIcon /> },
   { key: 'documents', label: 'Documentos', icon: <DocsIcon /> },
@@ -53,6 +55,10 @@ function Sidebar({ role, current, onChange, activeCrmTab = 'prospectos', collaps
           </button>
         ))}
       </nav>
+      <a href="https://www.adein.com.mx" target="_blank" rel="noopener noreferrer" className="sidebar-external-link" title="Sitio ADEIN (abre en nueva pestaña)">
+        <span className="sidebar-nav-icon"><ExternalIcon /></span>
+        <span className="sidebar-nav-label">Sitio ADEIN</span>
+      </a>
       <div className="sidebar-footer">
         <span className="sidebar-version">ADEIN v2</span>
       </div>
