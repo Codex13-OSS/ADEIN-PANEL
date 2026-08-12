@@ -38,7 +38,7 @@ ADEIN_LIA_URL=http://XX.XX.XX.XX:3002  # URL de LIA-PAGARE
 ADEIN_HTTP_PORT=8080 docker compose up -d
 
 # 3. Restaurar seed
-cat adein-production-seed.sql.gz | gunzip | docker exec -i adein-release-test-db-1 mariadb -u adein -p"$DB_PASSWORD" adein_crm_dev
+cat adein-production-seed.sql.gz | gunzip | docker compose exec -T db mariadb -u adein -p"$DB_PASSWORD" adein_crm_dev
 
 # 4. Verificar
 curl http://localhost:8080/health
@@ -53,7 +53,11 @@ http://IP_DEL_SERVIDOR:8080
 ## Backup
 
 ```bash
-docker exec adein-release-test-db-1 mariadb-dump -u adein -p adein_crm_dev | gzip > backup-$(date +%Y%m%d).sql.gz
+# Using helper
+DB_PASSWORD=xxx bash scripts/db-backup.sh <project>
+
+# Or manual
+docker compose exec -T db mariadb-dump -u adein -p"$DB_PASSWORD" adein_crm_dev | gzip > backup-$(date +%Y%m%d).sql.gz
 ```
 
 ## Restore
