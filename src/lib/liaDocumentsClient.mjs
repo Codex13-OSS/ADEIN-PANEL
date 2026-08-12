@@ -1,4 +1,4 @@
-const LIA_HANDOFF_ENDPOINT = 'http://127.0.0.1:3192/api/local/lia/handoff';
+const LIA_HANDOFF_ENDPOINT = '/api/local/lia/handoff';
 
 export async function requestLiaLaunch({ fetchImpl = fetch } = {}) {
   const response = await fetchImpl(LIA_HANDOFF_ENDPOINT);
