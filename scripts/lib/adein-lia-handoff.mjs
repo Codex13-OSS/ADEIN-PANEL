@@ -19,13 +19,36 @@ export function issueLiaHandoff({ secret, now = Date.now(), nonce = crypto.rando
   return { payload, token: `${encodedPayload}.${signature}` };
 }
 
-export function buildLiaLaunchUrl({ liaBaseUrl, token }) {
-  const baseUrl = new URL(liaBaseUrl);
-  if (baseUrl.protocol !== 'http:' || baseUrl.hostname !== '127.0.0.1' || baseUrl.port !== '3002') {
-    throw new Error('La integración LIA local sólo permite http://127.0.0.1:3002');
+export function buildLiaLaunchUrl({ liaBaseUrl = '/lia', token }) {
+  const rawBase = String(liaBaseUrl || '/lia').trim();
+
+  if (!rawBase.startsWith('/') || rawBase.startsWith('//')) {
+    throw new Error('La integración LIA requiere una ruta same-origin absoluta');
   }
-  const launchUrl = new URL('/api/auth/handoff', baseUrl);
+
+  const baseUrl = new URL(rawBase, 'http://adein.invalid');
+
+  if (
+    baseUrl.origin !== 'http://adein.invalid'
+    || baseUrl.search
+    || baseUrl.hash
+  ) {
+    throw new Error('La integración LIA requiere una ruta same-origin válida');
+  }
+
+  const basePath = baseUrl.pathname.replace(/\/+$/, '');
+
+  if (!basePath || basePath === '/') {
+    throw new Error('La ruta same-origin de LIA no puede ser la raíz');
+  }
+
+  const launchUrl = new URL(
+    `${basePath}/api/auth/handoff`,
+    'http://adein.invalid',
+  );
+
   launchUrl.searchParams.set('token', token);
   launchUrl.searchParams.set('embedded', '1');
-  return launchUrl.toString();
+
+  return `${launchUrl.pathname}${launchUrl.search}`;
 }

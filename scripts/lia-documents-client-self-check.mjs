@@ -3,9 +3,9 @@ import fs from 'node:fs/promises';
 import { requestLiaLaunch } from '../src/lib/liaDocumentsClient.mjs';
 
 const launchUrl = await requestLiaLaunch({
-  fetchImpl: async (url) => ({ ok: true, json: async () => ({ ok: true, launchUrl: 'http://127.0.0.1:3002/api/auth/handoff?token=synthetic' }) }),
+  fetchImpl: async (url) => ({ ok: true, json: async () => ({ ok: true, launchUrl: '/lia/api/auth/handoff?token=synthetic' }) }),
 });
-assert.equal(launchUrl, 'http://127.0.0.1:3002/api/auth/handoff?token=synthetic');
+assert.equal(launchUrl, '/lia/api/auth/handoff?token=synthetic');
 
 const documentsPage = await fs.readFile(new URL('../src/pages/DocumentsPage.tsx', import.meta.url), 'utf8');
 assert.match(documentsPage, /<iframe/);

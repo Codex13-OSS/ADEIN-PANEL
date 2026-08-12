@@ -31,6 +31,21 @@ const json = (res, statusCode, body, req) => {
   res.end(JSON.stringify(body));
 };
 
+// Errores que indican indisponibilidad de la base de datos (503) vs errores de negocio (500).
+const isDbUnavailableError = (error) => {
+  const code = String(error?.code || '');
+  return (
+    code.startsWith('ER_')
+    || code.startsWith('PROTOCOL_')
+    || code === 'ECONNREFUSED'
+    || code === 'ETIMEDOUT'
+    || code === 'ENOTFOUND'
+    || code === 'EHOSTUNREACH'
+    || code === 'EAI_AGAIN'
+    || /Lost connection|Connection lost|closed state|Connection is closed|not connected/i.test(String(error?.message || ''))
+  );
+};
+
 const readJson = (req) => new Promise((resolve, reject) => {
   let body = '';
   req.on('data', (chunk) => {
@@ -56,7 +71,7 @@ export function createLeadAgentApiServer({
   completeAppointment = async () => { throw new Error('Citas no configuradas'); },
   issueLiaHandoff = async () => { throw new Error('Enlace LIA no configurado'); },
 }) {
-  return http.createServer(async (req, res) => {
+  const handleRequest = async (req, res) => {
     if (req.method === 'OPTIONS') return json(res, 204, {}, req);
     if (req.method === 'GET' && req.url === '/health') {
       return json(res, 200, { ok: true, service: 'adein-lead-agent-api', localOnly: true }, req);
@@ -119,5 +134,18 @@ export function createLeadAgentApiServer({
     } catch (error) {
       return json(res, 400, { ok: false, error: error.message }, req);
     }
+  };
+
+  // Red de seguridad: ningún error (p.ej. caída de DB) debe matar el proceso.
+  // Se responde 503 (DB/upstream indisponible) o 500 y el servidor sigue vivo.
+  return http.createServer((req, res) => {
+    handleRequest(req, res).catch((error) => {
+      if (res.writableEnded) return;
+      try {
+        json(res, isDbUnavailableError(error) ? 503 : 500, { ok: false, error: 'Error interno del servicio', detail: error.message }, req);
+      } catch {
+        // Socket ya cerrado; no hay nada más que responder.
+      }
+    });
   });
 }

@@ -23,7 +23,7 @@ const server = createLeadAgentApiServer({
   saveAppointment: async (input) => { savedAppointment = input; return { ok: true }; },
   saveReminder: async (input) => { savedReminder = input; return { ok: true, followupAt: '2026-08-05' }; },
   completeAppointment: async ({ appointmentId }) => { completedAppointmentId = appointmentId; return { ok: true }; },
-  issueLiaHandoff: async () => 'http://127.0.0.1:3002/api/auth/handoff?token=synthetic-token',
+  issueLiaHandoff: async () => '/lia/api/auth/handoff?token=synthetic-token',
 });
 
 server.listen(0, '127.0.0.1');
@@ -36,7 +36,7 @@ assert.deepEqual(await health.json(), { ok: true, service: 'adein-lead-agent-api
 
 const handoff = await fetch(`http://127.0.0.1:${port}/api/local/lia/handoff`);
 assert.equal(handoff.status, 200);
-assert.deepEqual(await handoff.json(), { ok: true, launchUrl: 'http://127.0.0.1:3002/api/auth/handoff?token=synthetic-token' });
+assert.deepEqual(await handoff.json(), { ok: true, launchUrl: '/lia/api/auth/handoff?token=synthetic-token' });
 
 const leads = await fetch(`http://127.0.0.1:${port}/api/local/lead-agent/leads`);
 assert.equal(leads.status, 200);
