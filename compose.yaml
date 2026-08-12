@@ -28,6 +28,9 @@ services:
       DB_USER: ${DB_USER:-adein}
       DB_PASSWORD: ${DB_PASSWORD}
       LEAD_AGENT_LISTEN: "0.0.0.0"
+      ADEIN_LIA_HANDOFF_SECRET_FILE: /run/secrets/adein-lia-handoff-secret
+    volumes:
+      - ${ADEIN_LIA_HANDOFF_SECRET_HOST_PATH:-/dev/null}:/run/secrets/adein-lia-handoff-secret:ro
     expose:
       - "3192"
     depends_on:

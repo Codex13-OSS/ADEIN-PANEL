@@ -70,6 +70,34 @@ DB_PASSWORD=xxx bash scripts/db-restore.sh <project> backup.sql.gz
 cat backup.sql.gz | gunzip | docker compose exec -T db mariadb -u adein -p adein_crm_dev
 ```
 
+## LIA-PAGARE handoff secret
+
+El Lead Agent necesita el secreto compartido con LIA-PAGARE para firmar el token de handoff.
+
+Crear un archivo de texto con el secreto (mínimo 32 caracteres):
+
+```
+/opt/adein/secrets/lia-handoff-secret
+```
+
+Con permisos restrictivos:
+
+```bash
+chmod 600 /opt/adein/secrets/lia-handoff-secret
+```
+
+El mismo secreto debe coincidir con el configurado en LIA-PAGARE.
+
+En `.env` de producción:
+
+```
+ADEIN_LIA_HANDOFF_SECRET_HOST_PATH=/opt/adein/secrets/lia-handoff-secret
+```
+
+Compose lo monta read-only en `/run/secrets/adein-lia-handoff-secret` dentro del container lead-agent.
+
+NO incluir el contenido del secreto en Git, env files del repo, ni imágenes Docker.
+
 ## NO hacer
 
 - No publicar 3192 ni 3306 al host
