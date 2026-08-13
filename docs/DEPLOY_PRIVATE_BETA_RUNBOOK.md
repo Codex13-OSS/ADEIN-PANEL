@@ -25,6 +25,10 @@ LIA host: PORT=3103, bind * (comportamiento actual), bloqueado desde Internet po
 - `git -C <release-dir> status` limpio y HEAD = commit del MANIFEST.
 - Puertos: 18080 y 3103 libres; 3003 (antiguo LIA) intacto y en uso por el servicio viejo.
 - `docker --version` y `docker compose version` OK en el host.
+- Wrapper operativo `adein-compose` disponible y `adein-compose ps` OK
+  (el wrapper inyecta SIEMPRE `--env-file /etc/adein/.env`; nunca ejecutar
+  `docker compose` directo sin el env autoritativo: causa drift de variables
+  vacías y recreación accidental de contenedores).
 - `ufw status` visible (root); 3103 NO debe estar abierto desde Internet.
 - Confirmar que NO existe el volumen `adein_mariadb_data` con datos reales en este host.
   Si existe: parar y decidir con el propietario (nunca `compose up` sobre datos desconocidos).
@@ -59,7 +63,7 @@ el endpoint de handoff responde 503 y LIA rechaza con 401.
 - Los SQL `docs/db/004_adein_local_lead_agent_schema.sql` y
   `docs/db/005_commercial_intelligence_v1.sql` se montan en
   `/docker-entrypoint-initdb.d/` (solo se ejecutan con volumen VACÍO).
-- Primer arranque: `docker compose up -d db` → esperar healthy →
+- Primer arranque: `adein-compose up -d db` → esperar healthy →
   verificar `SHOW TABLES` (adein_leads, adein_lead_appointments,
   adein_lead_analysis_events, adein_processed_files,
   adein_commercial_analysis_history).
@@ -85,7 +89,8 @@ el endpoint de handoff responde 503 y LIA rechaza con 401.
 
 ## 6. ADEIN (docker compose)
 
-- `docker compose up -d --build` con el `.env` del paso 2.
+- `adein-compose up -d --build` (el wrapper inyecta `--env-file /etc/adein/.env`;
+  NUNCA `docker compose` directo sin el env autoritativo).
 - Verificar healthchecks: db healthy, web healthy
   (healthcheck = /api/local/lead-agent/leads acepta 200|401; lead-agent
   healthy con su nuevo healthcheck de Node fetch).
@@ -106,7 +111,7 @@ el endpoint de handoff responde 503 y LIA rechaza con 401.
 
 ## 8. Rollback
 
-1. `docker compose down` (SIN -v: conservar volumen).
+1. `adein-compose down` (SIN -v: conservar volumen).
 2. Restaurar servicios viejos (PM2 antiguo ADEIN + LIA 3003, /etc/nginx real).
 3. Si se reutilizó MariaDB: restaurar mysqldump previo. Si el volumen es nuevo: `docker volume rm adein_mariadb_data`.
 4. Revertir firewall: deny 18080, restaurar reglas previas.
