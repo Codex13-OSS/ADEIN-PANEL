@@ -114,6 +114,7 @@ function Shell({ session, defaultSection, onLogout }: Props) {
           <button className={section === 'crm' ? 'active' : ''} onClick={() => handleSectionChange('crm')}>Ventas</button>
           <button className={section === 'business' ? 'active' : ''} onClick={() => handleSectionChange('business')}>Negocio</button>
           <button className={section === 'documents' ? 'active' : ''} onClick={() => handleSectionChange('documents')}>Docs</button>
+          <a href="https://www.adein.com.mx" target="_blank" rel="noopener noreferrer" title="Sitio ADEIN (abre en nueva pestaña)">Sitio ADEIN</a>
           <button onClick={onLogout}>Salir</button>
         </div>
       </nav>
