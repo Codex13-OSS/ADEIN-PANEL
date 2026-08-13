@@ -105,9 +105,12 @@ function Shell({ session, defaultSection, onLogout }: Props) {
       <AdeinAnimatedBackground variant="panel" />
       {/* Mobile Navigation */}
       <nav className="mobile-nav">
-        <div className="mobile-nav-brand">
-          <img src="/brand/adein.png" alt="ADEIN" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-          <span>{title}</span>
+        <div className="mobile-nav-top">
+          <div className="mobile-nav-brand">
+            <img src="/brand/adein.png" alt="ADEIN" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+            <span>{title}</span>
+          </div>
+          <button className="mobile-nav-logout" onClick={onLogout}>Salir</button>
         </div>
         <div className="mobile-nav-links">
           <button className={section === 'dashboard' ? 'active' : ''} onClick={() => handleSectionChange('dashboard')}>Inicio</button>
@@ -115,7 +118,6 @@ function Shell({ session, defaultSection, onLogout }: Props) {
           <button className={section === 'business' ? 'active' : ''} onClick={() => handleSectionChange('business')}>Negocio</button>
           <button className={section === 'documents' ? 'active' : ''} onClick={() => handleSectionChange('documents')}>Docs</button>
           <a href="https://www.adein.com.mx" target="_blank" rel="noopener noreferrer" title="Sitio ADEIN (abre en nueva pestaña)">Sitio ADEIN</a>
-          <button onClick={onLogout}>Salir</button>
         </div>
       </nav>
       <Sidebar role={session.role} current={activeSection} activeCrmTab={activeCrmTab} onChange={handleSectionChange} collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((value) => !value)} />

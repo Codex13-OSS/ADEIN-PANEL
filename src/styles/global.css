@@ -518,12 +518,13 @@ th, td { padding: .8rem; border-bottom: 1px solid var(--border-soft); text-align
 /* ── Mobile Navigation ── */
 .mobile-nav { display: none; }
 @media (max-width: 767px) {
-  .mobile-nav { display: flex; justify-content: space-between; align-items: center; max-width: 100%; min-width: 0; padding: .5rem .8rem; padding-top: calc(.5rem + env(safe-area-inset-top, 0px)); background: rgba(255,255,255,.15); backdrop-filter: blur(24px); border-bottom: 1px solid rgba(255,255,255,.20); position: sticky; top: 0; z-index: 10; }
+  .mobile-nav { display: flex; flex-direction: column; gap: .35rem; max-width: 100%; min-width: 0; padding: .5rem .8rem; padding-top: calc(.5rem + env(safe-area-inset-top, 0px)); background: rgba(255,255,255,.15); backdrop-filter: blur(24px); border-bottom: 1px solid rgba(255,255,255,.20); position: sticky; top: 0; z-index: 10; }
+  .mobile-nav-top { display: flex; align-items: center; justify-content: space-between; gap: .5rem; min-width: 0; }
   .mobile-nav-brand { display: flex; align-items: center; gap: .5rem; min-width: 0; }
   .mobile-nav-brand img { width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0; }
   .mobile-nav-brand span { font-size: .85rem; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .mobile-nav-links { display: flex; gap: .3rem; overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 0 .4rem; min-width: 0; flex: 1 1 auto; scrollbar-width: none; }
-  .mobile-nav-links::-webkit-scrollbar { display: none; }
+  .mobile-nav-logout { flex-shrink: 0; padding: .4rem .7rem; border: 1px solid rgba(255,255,255,.25); border-radius: 8px; background: transparent; color: var(--text-muted); font-size: .72rem; white-space: nowrap; cursor: pointer; }
+  .mobile-nav-links { display: flex; flex-wrap: wrap; gap: .3rem; min-width: 0; padding: 0; }
   .mobile-nav-links button, .mobile-nav-links a { padding: .4rem .7rem; border: 1px solid rgba(255,255,255,.25); border-radius: 8px; background: transparent; color: var(--text-muted); font-size: .72rem; white-space: nowrap; flex-shrink: 0; text-decoration: none; display: inline-flex; align-items: center; }
   .mobile-nav-links a { color: var(--accent-green-dark); border-color: rgba(11,122,66,.22); }
   .mobile-nav-links button.active { background: rgba(255,255,255,.30); color: var(--accent-green-dark); font-weight: 600; border-color: rgba(11,122,66,.20); }
