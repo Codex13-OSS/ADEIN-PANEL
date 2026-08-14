@@ -220,6 +220,16 @@ export function createMariaDbLeadRepository(connection) {
     },
     async saveAppointment({ leadId, buyerName, date, time }) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date))) throw new Error('Fecha de cita inválida');
+      const parts = Object.fromEntries(
+        new Intl.DateTimeFormat('en-US', {
+          timeZone: 'America/Mexico_City',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+        }).formatToParts(new Date()).map(({ type, value }) => [type, value]),
+      );
+      const today = `${parts.year}-${parts.month}-${parts.day}`;
+      if (date < today) throw new Error('No se pueden agendar citas en el pasado');
       if (time && !/^\d{2}:\d{2}$/.test(String(time))) throw new Error('Hora de cita inválida');
       const name = String(buyerName ?? '').trim();
       if (!name) throw new Error('Nombre del comprador requerido');

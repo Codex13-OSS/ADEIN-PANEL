@@ -56,10 +56,20 @@ assert.deepEqual(queuedFile, { fileName: 'chat-exportado.txt', content: 'Conteni
 assert.equal(triggeredSourceRef, 'queued-chat.txt');
 
 const appointment = await fetch(`http://127.0.0.1:${port}/api/local/lead-agent/leads/41/appointment`, {
-  method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ buyerName: 'Comprador confirmado', date: '2026-08-05', time: '10:30' }),
+  method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ buyerName: 'Comprador confirmado', date: '2099-12-31', time: '10:30' }),
 });
 assert.deepEqual(await appointment.json(), { ok: true });
-assert.deepEqual(savedAppointment, { leadId: '41', buyerName: 'Comprador confirmado', date: '2026-08-05', time: '10:30' });
+assert.deepEqual(savedAppointment, { leadId: '41', buyerName: 'Comprador confirmado', date: '2099-12-31', time: '10:30' });
+
+const pastDate = await fetch(`http://127.0.0.1:${port}/api/local/lead-agent/leads/41/appointment`, {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ buyerName: 'Comprador confirmado', date: '2020-01-01', time: '10:30' }),
+});
+assert.equal(pastDate.status, 400);
+const pastDateBody = await pastDate.json();
+assert.equal(pastDateBody.ok, false);
+assert.match(pastDateBody.error, /pasado/i);
 
 const completedAppointment = await fetch(`http://127.0.0.1:${port}/api/local/lead-agent/appointments/9/complete`, { method: 'POST' });
 assert.deepEqual(await completedAppointment.json(), { ok: true });

@@ -108,7 +108,21 @@ export function createLeadAgentApiServer({
       try {
         const input = await readJson(req);
         const leadId = leadAction[1];
-        if (leadAction[2] === 'appointment') return json(res, 201, await saveAppointment({ leadId, buyerName: input.buyerName, date: input.date, time: input.time }), req);
+        if (leadAction[2] === 'appointment') {
+          if (!input.date) throw new Error('Fecha de cita requerida');
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(String(input.date))) throw new Error('Formato de fecha inválido (use YYYY-MM-DD)');
+          const parts = Object.fromEntries(
+            new Intl.DateTimeFormat('en-US', {
+              timeZone: 'America/Mexico_City',
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+            }).formatToParts(new Date()).map(({ type, value }) => [type, value]),
+          );
+          const today = `${parts.year}-${parts.month}-${parts.day}`;
+          if (input.date < today) throw new Error('No se pueden agendar citas en el pasado');
+          return json(res, 201, await saveAppointment({ leadId, buyerName: input.buyerName, date: input.date, time: input.time }), req);
+        }
         return json(res, 201, await saveReminder({ leadId, days: input.days }), req);
       } catch (error) {
         return json(res, 400, { ok: false, error: error.message }, req);
