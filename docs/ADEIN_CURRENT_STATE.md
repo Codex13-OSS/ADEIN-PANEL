@@ -22,17 +22,18 @@ y verificar únicamente aquello que pueda haber cambiado.
 repo=/home/coco/agentes-si/projects/adein-panel-agent-workspace
 remote=git@github.com:Codex13-OSS/ADEIN-PANEL.git
 branch=task/adein-properties-media-contract-008
-HEAD=23af7476a16d2dc95251a4439256f436c3649875
+HEAD=e632c40294645d3145ad18a59e50b817e000d717
 main=23af7476a16d2dc95251a4439256f436c3649875
 origin/main=23af7476a16d2dc95251a4439256f436c3649875
+origin/task/adein-properties-media-contract-008=e632c40294645d3145ad18a59e50b817e000d717
 ```
 
 Estado:
 
 ```text
 WORKTREE_DIRTY=true
-COMMIT_PENDING=true
-PUSH_PENDING=true
+COMMIT_PENDING=false
+PUSH_PENDING=false
 DEPLOY_PENDING=true
 ```
 
@@ -234,8 +235,8 @@ PHASE_1_CONTRACT_PASS=true
 PHASE_2_ADMIN_UI_IMPLEMENTED=true
 QA_HUMANA_INICIADA=true
 QA_HUMANA_FUNCIONAL_PASS=true
-COMMIT_PENDING=true
-PUSH_PENDING=true
+COMMIT_PENDING=false
+PUSH_PENDING=false
 DEPLOY_PENDING=true
 ```
 
