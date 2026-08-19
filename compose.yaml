@@ -12,6 +12,8 @@ services:
       # re-ejecuta si ya existen datos (persistencia garantizada).
       - ./docs/db/004_adein_local_lead_agent_schema.sql:/docker-entrypoint-initdb.d/10-adein-lead-agent-schema.sql:ro
       - ./docs/db/005_commercial_intelligence_v1.sql:/docker-entrypoint-initdb.d/20-commercial-intelligence.sql:ro
+      - ./docs/db/006_adein_unified_business_schema.sql:/docker-entrypoint-initdb.d/30-adein-unified-business-schema.sql:ro
+      - ./docs/db/007_crm_lead_inventory_interest.sql:/docker-entrypoint-initdb.d/40-crm-lead-inventory-interest.sql:ro
     healthcheck:
       test: ["CMD", "mariadb-admin", "ping", "-h", "localhost"]
       interval: 5s
@@ -32,10 +34,20 @@ services:
       DB_USER: ${DB_USER:-adein}
       DB_PASSWORD: ${DB_PASSWORD}
       LEAD_AGENT_LISTEN: "0.0.0.0"
+      ADEIN_LOCAL_DB_ENV_FILE: /run/secrets/adein-local-db.env
+      ADEIN_DB_HOST: db
+      ADEIN_DB_PORT: "3306"
       ADEIN_LIA_BASE_URL: ${ADEIN_LIA_BASE_URL:-/lia}
+      ADEIN_OWNER_AUTH_FILE: /run/secrets/adein-owner-auth
       ADEIN_LIA_HANDOFF_SECRET_FILE: /run/secrets/adein-lia-handoff-secret
+      ADEIN_MEDIA_DIR: /var/lib/adein/media
     volumes:
+      # Fuente durable local del contrato ADEIN_DB_*. Nunca duplicar credenciales
+      # en Compose; el Lead Agent la consume read-only y falla cerrado si falta.
+      - ${ADEIN_LOCAL_DB_ENV_HOST_PATH:-/home/coco/.agentes-si-data/adein/runtime/local-db.env}:/run/secrets/adein-local-db.env:ro
       - ${ADEIN_LIA_HANDOFF_SECRET_HOST_PATH:-/dev/null}:/run/secrets/adein-lia-handoff-secret:ro
+      - ${ADEIN_OWNER_AUTH_HOST_PATH:-/dev/null}:/run/secrets/adein-owner-auth:ro
+      - adein_property_media:/var/lib/adein/media
     expose:
       - "3192"
     depends_on:
@@ -64,3 +76,4 @@ services:
 
 volumes:
   adein_mariadb_data:
+  adein_property_media:

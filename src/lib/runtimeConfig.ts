@@ -8,3 +8,6 @@ export function getLiaUrl() {
 
 // Lead Agent is always same-origin behind the web server proxy
 export const LEAD_AGENT_API = '/api/local/lead-agent';
+
+export const OWNER_AUTH_API = '/api/local/auth';
+export const PROPERTIES_API = '/api/local/properties';

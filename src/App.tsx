@@ -7,13 +7,16 @@ const SESSION_KEY = 'adein-panel-session';
 type Session = {
   username: string;
   role: Role;
+  token: string;
 };
 
 const parseSession = (): Session | null => {
   const saved = sessionStorage.getItem(SESSION_KEY);
   if (!saved) return null;
   try {
-    return JSON.parse(saved) as Session;
+    const parsed = JSON.parse(saved) as Partial<Session>;
+    if (!parsed.username || !parsed.role || !parsed.token) return null;
+    return parsed as Session;
   } catch {
     return null;
   }
@@ -31,8 +34,8 @@ function App() {
   if (!session || !defaultSection) {
     return (
       <LoginView
-        onLogin={(username, role) => {
-          const nextSession = { username, role };
+        onLogin={(username, role, token) => {
+          const nextSession = { username, role, token };
           sessionStorage.setItem(SESSION_KEY, JSON.stringify(nextSession));
           setSession(nextSession);
         }}

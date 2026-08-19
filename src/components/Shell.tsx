@@ -6,6 +6,7 @@ import OwnerDashboardPage from '../pages/OwnerDashboardPage';
 import CrmPage from '../pages/CrmPage';
 import CurrentBusinessPage from '../pages/CurrentBusinessPage';
 import DocumentsPage from '../pages/DocumentsPage';
+import PropertiesPage from '../pages/PropertiesAdminPage';
 
 import { CrmTab } from '../pages/CrmPage';
 import AdeinAnimatedBackground from './AdeinAnimatedBackground';
@@ -13,7 +14,7 @@ import { Prospect } from '../types/crm';
 import { DbSnapshotProvider } from '../context/DbSnapshotContext';
 import { LEAD_AGENT_API } from '../lib/runtimeConfig';
 
-export type OwnerSection = 'dashboard' | 'crm' | 'business' | 'documents';
+export type OwnerSection = 'dashboard' | 'crm' | 'business' | 'properties' | 'documents';
 export type SellerSection = 'crm' | 'documents';
 
 const crmTabBySection = { crm: 'prospectos' } as const;
@@ -25,7 +26,7 @@ const sectionByCrmTab: Record<CrmTab, SellerSection> = {
 
 
 type Props = {
-  session: { role: Role; username: string };
+  session: { role: Role; username: string; token: string };
   defaultSection: OwnerSection | SellerSection;
   onLogout: () => void;
 };
@@ -84,20 +85,21 @@ function Shell({ session, defaultSection, onLogout }: Props) {
   };
   const title = useMemo(() => ({
     dashboard: 'Inicio', crm: 'Ventas', business: 'Mi negocio',
-    documents: 'Documentos',
+    properties: 'Propiedades', documents: 'Documentos',
   }[section]), [section]);
 
   const subtitle = useMemo(() => ({
     dashboard: 'Lo más importante hoy', crm: 'Prospectos, citas y conversaciones', business: 'Cómo va tu operación',
-    documents: 'Contratos y pagarés',
+    properties: 'Inventario, lotes y disponibilidad', documents: 'Contratos y pagarés',
   }[section]), [section]);
 
   const renderPage = () => {
     if (section === 'dashboard') return <OwnerDashboardPage prospects={prospects} />;
-    if (section === 'crm') return <CrmPage activeTab={activeCrmTab} onTabChange={setActiveCrmTab} prospects={prospects} onProspectsLoaded={setProspects} />;
+    if (section === 'crm') return <CrmPage activeTab={activeCrmTab} onTabChange={setActiveCrmTab} prospects={prospects} onProspectsLoaded={setProspects} ownerToken={isSeller ? undefined : session.token} />;
     if (section === 'business') return <CurrentBusinessPage prospects={prospects} />;
+    if (section === 'properties') return <PropertiesPage token={session.token} />;
     if (section === 'documents') return <DocumentsPage />;
-    return <CrmPage activeTab={activeCrmTab} onTabChange={setActiveCrmTab} prospects={prospects} onProspectsLoaded={setProspects} />;
+    return <CrmPage activeTab={activeCrmTab} onTabChange={setActiveCrmTab} prospects={prospects} onProspectsLoaded={setProspects} ownerToken={isSeller ? undefined : session.token} />;
   };
 
   return (
@@ -115,7 +117,8 @@ function Shell({ session, defaultSection, onLogout }: Props) {
         <div className="mobile-nav-links">
           <button className={section === 'dashboard' ? 'active' : ''} onClick={() => handleSectionChange('dashboard')}>Inicio</button>
           <button className={section === 'crm' ? 'active' : ''} onClick={() => handleSectionChange('crm')}>Ventas</button>
-          <button className={section === 'business' ? 'active' : ''} onClick={() => handleSectionChange('business')}>Negocio</button>
+          {!isSeller && <button className={section === 'business' ? 'active' : ''} onClick={() => handleSectionChange('business')}>Negocio</button>}
+          {!isSeller && <button className={section === 'properties' ? 'active' : ''} onClick={() => handleSectionChange('properties')}>Propiedades</button>}
           <button className={section === 'documents' ? 'active' : ''} onClick={() => handleSectionChange('documents')}>Docs</button>
           <a href="https://www.adein.com.mx" target="_blank" rel="noopener noreferrer" title="Sitio ADEIN (abre en nueva pestaña)">Sitio ADEIN</a>
         </div>

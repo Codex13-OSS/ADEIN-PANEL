@@ -14,7 +14,7 @@ export function validateLocalAdeinDbConfig(env) {
   if (env.ADEIN_DB_HOST !== '127.0.0.1') throw new Error('ADEIN_DB_HOST debe ser 127.0.0.1');
   if (String(env.ADEIN_DB_PORT) !== '3307') throw new Error('ADEIN_DB_PORT debe ser 3307');
   if (env.ADEIN_DB_NAME !== 'adein_crm_dev') throw new Error('ADEIN_DB_NAME debe ser adein_crm_dev');
-  if (env.ADEIN_DB_USER !== 'adein_crm_agent') throw new Error('ADEIN_DB_USER debe ser adein_crm_agent');
+  // ADEIN_DB_USER debe existir; MariaDB valida la credencial real.
 
   return {
     host: env.ADEIN_DB_HOST,
