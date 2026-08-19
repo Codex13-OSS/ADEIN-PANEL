@@ -1190,3 +1190,83 @@ th, td { padding: .8rem; border-bottom: 1px solid var(--border-soft); text-align
     flex: 1 1 100%;
   }
 }
+
+/* ADEIN Properties — simplified guided editor */
+.properties-admin-simplified { gap: 16px; }
+.properties-admin-simplified .properties-toolbar-card,
+.properties-admin-simplified .properties-card {
+  border: 1px solid #e4e7e3;
+  box-shadow: 0 2px 8px rgba(31, 47, 38, .04);
+  background: #fff;
+}
+.properties-admin-simplified .properties-toolbar-card { background: #fbfcfa; }
+.properties-admin-simplified .properties-toolbar-card p,
+.properties-admin-simplified .properties-card p { line-height: 1.5; }
+.properties-admin-simplified .properties-help,
+.properties-admin-simplified label small {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+.properties-admin-simplified .properties-selector { padding: 16px; }
+.properties-admin-simplified .properties-selector .properties-card-heading { padding: 2px 2px 12px; }
+.properties-admin-simplified .properties-selector .properties-card-heading p { margin-top: 5px; font-size: 12px; }
+.properties-admin-simplified .property-row {
+  border-color: transparent;
+  border-bottom-color: #e7e9e6;
+  border-radius: 9px;
+  background: transparent;
+  box-shadow: none;
+}
+.properties-admin-simplified .property-row:hover { background: #f6f8f5; }
+.properties-admin-simplified .property-row.selected {
+  border-color: #dce7df;
+  border-left: 3px solid var(--properties-accent);
+  background: #f3f7f4;
+  box-shadow: none;
+}
+.properties-admin-simplified .editor-section { padding: 22px; gap: 20px; }
+.properties-admin-simplified .editor-section-title { display: block; padding-bottom: 13px; border-bottom: 1px solid #eceeeb; }
+.properties-admin-simplified .editor-section-title h4 { color: var(--text-main); font-size: 16px; letter-spacing: .035em; text-transform: uppercase; }
+.properties-admin-simplified .editor-section-title p { max-width: 720px; margin-top: 5px; }
+.properties-admin-simplified .editor-grid label,
+.properties-admin-simplified .feature-editor-row label,
+.properties-admin-simplified .feature-add-row label { display: grid; align-content: start; gap: 6px; min-width: 0; color: var(--text-main); font-size: 13px; font-weight: 700; }
+.properties-admin-simplified input,
+.properties-admin-simplified select,
+.properties-admin-simplified textarea { border-color: #d9ddda; background: #fff; box-shadow: none; }
+.properties-admin-simplified input:focus,
+.properties-admin-simplified select:focus,
+.properties-admin-simplified textarea:focus { outline: 2px solid rgba(27, 138, 74, .14); border-color: #7daa8d; }
+.properties-admin-simplified .advanced-options { padding: 0; border-top: 1px solid #eceeeb; }
+.properties-admin-simplified .advanced-options summary { padding: 15px 2px 3px; color: #3e5548; font-size: 13px; font-weight: 750; cursor: pointer; }
+.properties-admin-simplified .advanced-options[open] summary { margin-bottom: 8px; }
+.properties-admin-simplified .advanced-options .editor-grid { margin-top: 14px; padding: 16px; border-radius: 10px; background: #f7f8f6; }
+.properties-admin-simplified .feature-editor-row { border-color: #e4e7e3; background: #fafbfa; box-shadow: none; }
+.properties-admin-simplified .feature-editor-row label span,
+.properties-admin-simplified .feature-add-row label span { font-size: 12px; }
+.properties-admin-simplified .feature-order-controls button { min-width: 30px; min-height: 30px; padding: 0; }
+.properties-admin-simplified .text-action { color: #41564a !important; border-color: #d4dad6 !important; }
+.properties-admin-simplified .danger-action { color: #963e3e !important; border-color: transparent !important; background: transparent !important; }
+.properties-admin-simplified .photo-upload { min-height: 128px; border-color: #aebbb2; background: #f7f9f7; }
+.properties-admin-simplified .photo-upload:hover { border-color: var(--properties-accent); background: #f2f7f3; }
+.properties-admin-simplified .photo-card.cover { border-color: #73a183; box-shadow: 0 0 0 2px rgba(27, 138, 74, .10); }
+.properties-admin-simplified .cover-badge { background: #17683a; color: #fff; }
+.properties-admin-simplified .publication-section { background: #fbfcfa; }
+.properties-admin-simplified .publication-footer { padding-top: 0; border-top: 0; }
+.properties-admin-simplified .property-lots { box-shadow: none; background: #fafbfa; }
+.properties-admin-simplified .properties-primary-action,
+.properties-admin-simplified .properties-form button,
+.properties-admin-simplified .section-actions button,
+.properties-admin-simplified .publication-actions button:not(.properties-secondary-action),
+.properties-admin-simplified .feature-add-row button { background: var(--properties-accent-dark); box-shadow: none; }
+.properties-admin-simplified .properties-primary-action:hover,
+.properties-admin-simplified .section-actions button:hover,
+.properties-admin-simplified .publication-actions button:not(.properties-secondary-action):hover { background: #096435; box-shadow: none; }
+
+@media (max-width: 720px) {
+  .properties-admin-simplified .editor-section { padding: 17px 14px; }
+  .properties-admin-simplified .advanced-options .editor-grid { padding: 12px; }
+  .properties-admin-simplified .feature-editor-row label { grid-column: 1 / -1; }
+}
